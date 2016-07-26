@@ -1,0 +1,10 @@
+inputType=1
+varName=HGamEventInfo_EG_SCALE_ALL__asym
+varMin=0.6
+varMax=2
+plotDirectory=/sps/atlas/c/cgoudet/Plots/
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.Pythia8_ZH125.MxAODPhotonSys.p2669.h013_0.root
+objName=outTree
+legend=h013
+xTitle=__HASHTAGfrac{m_{__HASHTAGgamma__HASHTAGgamma}^{nom}-m_{__HASHTAGgamma__HASHTAGgamma}^{down}}{m_{__HASHTAGgamma__HASHTAGgamma}^{up}-m_{__HASHTAGgamma__HASHTAGgamma}^{nom}}
+rangeUserY=0 0.99

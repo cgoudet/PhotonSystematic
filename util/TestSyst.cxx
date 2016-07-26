@@ -39,14 +39,17 @@ using boost::multi_array;
 using boost::extents;
 #include "RooRealVar.h"
 #include "PlotFunctions/AtlasStyle.h"
+#include "PlotFunctions/AtlasLabels.h"
 #include "PlotFunctions/AtlasUtils.h"
 namespace po = boost::program_options;
 #include <HGamAnalysisFramework/HgammaAnalysis.h>
 #include "RooWorkspace.h"
-
+#include <sstream>
+using std::stringstream;
 #define DEBUG 1
+#include <Math/MinimizerOptions.h>
 
-int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName = "" );
+int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName = "" , int doXS=0);
 vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches, string outFileName );
 void WriteResultTabular( fstream &latexStream, map<string, vector<double>> &mapResult );
 
@@ -55,14 +58,16 @@ int main( int argc, char* argv[] ) {
   po::options_description desc("LikelihoodProfiel Usage");
 
   vector<string> inFiles;
-  string outFileName;
-  int mode = 0;
+  string outFileName, branchNamesFile;
+  int mode = 0, doXS=0;
   //define all options in the program
   desc.add_options()
     ("help", "Display this help message")
-    ("inFiles", po::value<vector <string> >(&inFiles), "" )
-    ("outFileName", po::value<string>( &outFileName )->default_value( "PhotonSyst.root") , "" )
+    ( "inFiles", po::value<vector <string> >(&inFiles), "" )
+    ( "outFileName", po::value<string>( &outFileName )->default_value( "PhotonSyst.root") , "" )
     ( "mode", po::value<int>( &mode )->default_value(0), "" )
+    ( "branchNamesFile", po::value<string>( &branchNamesFile ), "" )
+    ( "doXS", po::value<int>( &doXS ), "" )
     ;
   
   //Define options gathered by position                                                          
@@ -80,18 +85,22 @@ int main( int argc, char* argv[] ) {
   //  gROOT->Macro( "$ROOTCOREDIR/scripts/load_packages.C" );
 
   vector<string> inFilesName = {"/sps/atlas/e/escalier/HGamma/ProductionModes/MxAOD/h012/mc15c.PowhegPy8_ggH125.MxAODAllSys.p2625.h012.root/mc15c.PowhegPy8_ggH125.MxAODAllSys.p2625.h012.086.root"};
-  
-  vector<string> branchNames = { "HGamEventInfo"
-				 ,"HGamEventInfo_EG_RESOLUTION_ALL__1up"
-				 ,"HGamEventInfo_EG_RESOLUTION_ALL__1down"
-				 ,"HGamEventInfo_EG_SCALE_ALLCORR__1up"
-				 ,"HGamEventInfo_EG_SCALE_ALLCORR__1down"
-				 ,"HGamEventInfo_EG_SCALE_E4SCINTILLATOR__1up"
-				 ,"HGamEventInfo_EG_SCALE_E4SCINTILLATOR__1down"
-				 ,"HGamEventInfo_EG_SCALE_LARCALIB_EXTRA2015PRE__1up"
-				 ,"HGamEventInfo_EG_SCALE_LARCALIB_EXTRA2015PRE__1down" 
-  };
 
+  if ( branchNamesFile == "" ) {
+    cout << "No branchNamesFile given" << endl;
+    exit(0);
+  }
+
+  //Read the names of the branches of the tree to be read
+  vector<string> branchNames;
+  string dumString;
+  fstream streamBranch( branchNamesFile, fstream::in );
+  while ( streamBranch >> dumString ) branchNames.push_back( dumString );
+  if ( branchNames.size() < 2 ) {
+    cout << "Not enough branch given" << endl;
+    exit(0);
+  }
+  streamBranch.close();
 
   switch ( mode ) {
   case 0 : {
@@ -99,19 +108,11 @@ int main( int argc, char* argv[] ) {
     break;
   }
   case 1 :
-    FitTree( inFiles, branchNames, outFileName );
+    FitTree( inFiles, branchNames, outFileName, doXS );
     break;
 
   }//end switch
 
-
-  //vector<string> mxAODFiles =  ReadMxAOD( inFilesName, branchNames, outFileName );
-
-  //  PrintVector( mxAODFiles );
-   //   vector<string> dum = { "/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.PowhegPy8_ggH125.MxAODAllSys.p2625.h012_0.root" };
-   // vector<string> dum = { "/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/PhotonSyst_0.root" };
-  //  FitTree( mxAODFiles, branchNames );
-  //  
   return 0;
 }
 
@@ -122,7 +123,7 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
 
   //Create the names of all the required branches
   vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
-  vector<string> varNames = { "_m_yy", "_cat", "_weight" };
+  vector<string> varNames = { "_m_yy", "_cat", "_weight", "_weightXS", "_catXS", "_pt_yy" };
   vector<string> branchNames;
   map<string, double> mapVal;
   for ( auto vBranch : branches ) {
@@ -130,8 +131,18 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
       branchNames.push_back( vBranch+vVar );
       mapVal[branchNames.back()]=0;
     }
+    // if ( vBranch.find( "1down" ) != string::npos ) {
+    //   branchNames.push_back( string( TString(vBranch).ReplaceAll("1down", "asym") ) );
+    //   mapVal[ branchNames.back() ]=0;
+    // }
   }
 
+  vector<double> XSCatPt = {0., 40., 60., 100., 200., 9999999.};
+  double lumiWeight=1e3;
+  // fstream stream( "CompareEvent.txt", fstream::out | fstream::app  );
+  // stream << "process";
+  // for ( auto vName : branches ) stream << " " << vName << ( TString(vName).Contains( "1down" ) ? " " + TString(vName).ReplaceAll("1down", "asym" ) : "" );
+  // stream << endl;
   //GetThe weights for the datasets
   map<string, double> mapDatasetWeights;
 
@@ -154,27 +165,6 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
     delete dumInFile; dumInFile=0;
   }
 
-  TFile *fileWorkspace = new TFile( "/sps/atlas/c/cgoudet/Hgam/Couplages/Inputs/h012/StatisticsChallenge/h012/inputs/ModelSignal/workspace_signal_yields_categories.root" );
-  // cout << "fileWorkspace : " << fileWorkspace << endl;
-  RooWorkspace *ws = (RooWorkspace*) fileWorkspace->Get("ws_signal_yields_categories" );
-  //  ws->Print();
-  for ( auto vProc : processes ) { 
-    cout << "vProc : " << vProc << endl;
-    //    if ( dumPos != string::npos ) vProc = vProc.replace( dumPos, dumPos+3, "" );
-    //    vProc = string( TString( vProc ).ReplaceAll("125", "" ) );
-    cout << "vProc : " << vProc << endl;
-    string varName = "XS13_"+string( TString( vProc ).ReplaceAll("125", "" ) )+"_yy";
-    RooRealVar *var = ws->var( varName.c_str() );
-
-    if ( !var ) { cout << varName << " does not exist in " << ws->GetName() << endl; exit(0);}
-    var->Print();
-    cout << "finalWeight : " << vProc << " " << mapDatasetWeights[vProc] << " " << var->getVal() << " " << var->getVal()/mapDatasetWeights[vProc]*1e3 << endl;
-    mapDatasetWeights[vProc]=var->getVal()/mapDatasetWeights[vProc]*1e3;
-  }
-
-  delete ws;
-  delete fileWorkspace;
-
   xAOD::Init();
   int totEntry = 0;
   int nFile=0;
@@ -184,26 +174,27 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
   double datasetWeight = 1;
 
 
-  for ( auto vName : inFileNames ) {
-    cout << vName << endl;
-    TFile *inFile = new TFile( vName.c_str() );
+  for ( auto vFileName : inFileNames ) {
+    cout << vFileName << endl;
+    TFile *inFile = new TFile( vFileName.c_str() );
   
     xAOD::TEvent* tevent = new xAOD::TEvent(xAOD::TEvent::kClassAccess);
     tevent->readFrom( inFile ).ignore();
     int nentries = tevent->getEntries();
     string process;
     for ( auto vProc : processes ) {
-      if ( vName.find( vProc ) == string::npos ) continue;
+      if ( vFileName.find( vProc ) == string::npos ) continue;
       process = vProc;
       break;
     }
 
     if ( process == "" ) {
-      cout << vName << " was not found in map." << endl;
+      cout << vFileName << " was not found in map." << endl;
       exit(0);
     }
 
     datasetWeight = mapDatasetWeights[process];
+    if ( process == "tHjb" && TString(vFileName).Contains("h013") ) datasetWeight/=10.;
 
     cout << "process : " << process << endl;
     cout << "nentries : " << nentries << endl;
@@ -221,31 +212,62 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
       
       tevent->getEntry( i_event );
 
-
-      
+      double ptWeight=1;
+      string truthName = "HGamTruthEventInfo";
+      if ( !tevent->retrieve( mapEvent[truthName], truthName.c_str() ).isSuccess() ) { cout << "Can Not retrieve EventInfo" << endl; exit(1); }
+      if ( mapEvent[truthName]->auxdata<int>( "N_j" ) < 2 && TString(vFileName).Contains("ggH") ) { 
+	//	cout << "pt reweighting" << endl;
+	double H_pT = mapEvent[truthName]->auxdata<float>( "pT_yy" )/1e3;
+	if (H_pT<20) ptWeight=1.11;
+	else if (H_pT<45) ptWeight= 1.11 - (H_pT-20)/25*0.2; // -> 0.91
+	else if (H_pT<135) ptWeight= 0.91 - (H_pT-45)/90*0.36; // -> 0.55
+	else ptWeight= 0.55;
+      }
+      // stringstream ss;
+      // ss << process;
       bool keepEvent = false;
       for ( auto vName : branches ) {
+
 	
 	if ( ! tevent->retrieve( mapEvent[vName], vName.c_str() ).isSuccess() ){ cout << "Can Not retrieve EventInfo" << endl; exit(1); }
-	mapVal[vName+"_weight"] = ((bool) mapEvent[vName]->auxdata< char >( "isPassed" ))*mapEvent[vName]->auxdata<float>( "weightCatCoup_dev" )*datasetWeight;
-	//	cout << "weightCatCoup_dev : " << mapEvent[vName]->auxdata<float>( "weightCatCoup_dev" ) << endl;
-	keepEvent = keepEvent || mapVal[vName+"_weight"];
+
+	
+	//	cout << "XSBREff : " << mapEvent[vName]->auxdata<float>( "crossSectionBRfilterEff" ) << endl;	
+	mapVal[vName+"_weight"] = ((bool) mapEvent[vName]->auxdata< char >( "isPassed" ))*mapEvent[vName]->auxdata<float>( "weightCatCoup_dev" )/datasetWeight*mapEvent[vName]->auxdata<float>( "crossSectionBRfilterEff" )*lumiWeight*ptWeight;
+	mapVal[vName+"_weightXS"]= ((bool) mapEvent[vName]->auxdata< char >( "isPassed" ))*mapEvent[vName]->auxdata<float>( "weight" )/datasetWeight*mapEvent[vName]->auxdata<float>( "crossSectionBRfilterEff" )*lumiWeight*ptWeight;
+	keepEvent = keepEvent || mapVal[vName+"_weight"] || mapVal[vName+"_weightXS"];
+
 	mapVal[vName+"_m_yy"]=mapEvent[vName]->auxdata<float>( "m_yy" )/1e3;
 	mapVal[vName+"_cat"] = mapEvent[vName]->auxdata<int>( "catCoup_dev" );
+	int XSCat = 0;
+	mapVal[vName+"_pt_yy"] = mapEvent[vName]->auxdata<float>( "pT_yy" )/1e3;
+	while ( mapVal[vName+"_pt_yy"] > XSCatPt[XSCat] ) ++XSCat; 
+	mapVal[vName+"_catXS"] = XSCat;
 
-	//	cout << mapVal[vName+"_weight"] << " " << mapVal[vName+"_datasetWeight"] << " " << mapVal[vName+"_evtWeight"] << endl;
+	  //	ss << " " << mapVal[vName+"_m_yy"];
+	// if ( TString(vName).Contains( "__1down" ) ) {
+	//   double diffDown = mapVal[branches[0]+"_m_yy"] - mapVal[vName+"_m_yy"];
+	//   double diffUp = mapVal[string(TString(vName).ReplaceAll( "1down", "1up" ) )+"_m_yy"] - mapVal[branches[0]+"_m_yy"];
+	//   //	  cout << mapVal[branches[0]+"_m_yy"] << " " << mapVal[vName+"_m_yy"] << " " << mapVal[string(TString(vName).ReplaceAll( "1down", "1up" ) )] << endl;
+	//   //	  ss << " " <<  diffDown/diffUp;
+	//   ///	  mapVal[ string( TString(vName).ReplaceAll( "1down", "asym" ) ) ] = diffDown/diffUp;
+	// }
       }//end vName
-      
       if ( keepEvent ) { 
 	outTree->Fill();
 	totEntry++;
+	//	stream << ss.str() << endl;
       }
 
-      if ( ( totEntry%500000==0 && outTree->GetEntries() ) || ( vName == inFileNames.back() && i_event==nentries-1 ) ) {
+      if ( ( totEntry%500000==0 && outTree->GetEntries() ) || ( vFileName == inFileNames.back() && i_event==nentries-1 ) ) {
 	string dumName = outFileName;
-	dumName = string( TString::Format("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/%s_%d.root", StripString(dumName).c_str(), nFile ) );
+	bool isFB1 = lumiWeight == 1e3;
+	bool isFix = TString(vFileName).Contains("PhotonSysFix");
+	cout << isFB1 << " " << isFix << endl;
+	dumName = string( TString::Format("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/%s%s%s_%d.root", isFB1 ? "FB1/" : "", isFix ? "PhotonSysFix/":"", StripString(dumName).c_str(), nFile ) );
 	outFiles.push_back( dumName );
 	cout << "saving : " << dumName << endl;
+	cout << "entries : " << outTree->GetEntries() << endl;
 	TFile *dumFile = new TFile( dumName.c_str(), "recreate" );
 	outTree->Write();
 	dumFile->Close();
@@ -261,7 +283,7 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
 }
 //######################################################
 
-int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName ) {
+int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName, int doXS ) {
   string defaultOutputDirectory = "/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/";
   if ( outFileName == "" ) outFileName = defaultOutputDirectory;
   if ( outFileName != "" && outFileName.back()!='/' ) outFileName+="/";
@@ -275,33 +297,38 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   
   map<string, vector<RooDataSet*>> mapSet;
   map<string, RooRealVar*> mapVar;
-  // for ( auto vBranch : branches ) {
-  //   mapArgSet[vBranch] = new RooArgSet();
-  //   for ( auto vVar : variables ) {    
-  //     string varName = vBranch + vVar;
-  //     vVar = vVar.substr( 1 );
-  //     mapVar[varName] = new RooRealVar( vVar.c_str(), vVar.c_str(), 0 );
-  //     mapArgSet[vBranch]->add( *mapVar[varName] );
-  //     mapVar[varName]->Print();
-  //   }
 
-  // }
+  fstream stream;
+  stream.open( (outFileName + "CompareFits.txt").c_str(), fstream::out );
+  for ( auto vName : branches ) stream << " " << vName;
+  stream << endl;
+  vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
+  map<string, TH1D*> mapHistAsym;
+  for ( auto vProc : processes ) mapHistAsym[vProc] = new TH1D( "histAsym", "histAsym", 100, -1, 1 );
+  vector<string> categoriesNames;
+  if ( doXS == 0 ) categoriesNames = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
+  else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
+
+  multi_array<double, 3>  mArrayMean;
+  mArrayMean.resize( extents[3][categoriesNames.size()][branches.size()] );
+
 
 
   vector<string> CBVarNames = { "m_yy", "mean", "alphaHi", "nHi", "alphaLow", "nLow", "sigma", "weight" };
   map<string, vector<double>> mapInitValues;
   mapInitValues["weight"]={ 1, 0, 1e3 };
-  mapInitValues["mean"]={ 125, 122, 128 };
+  mapInitValues["mean"]={ 125, 124, 126 };
   mapInitValues["m_yy"]= { 126, 105, 160 };
-  mapInitValues["sigma"]={5, 1, 7 };
+  mapInitValues["sigma"]={1.5, 1, 3 };
   mapInitValues["alphaHi"]= {1.6, 0, 10 };
   mapInitValues["alphaLow"]={1.3, 0, 10};
-  mapInitValues["nLow"]={19, 0, 100};
-  mapInitValues["nHi"]={28, 0, 100};
+  mapInitValues["nLow"]={9, 0, 100};
+  mapInitValues["nHi"]={5, 0, 100};
 
   for ( auto vVarNames : CBVarNames ) {
     mapVar[vVarNames] = new RooRealVar( vVarNames.c_str(), vVarNames.c_str(), mapInitValues[vVarNames][0], mapInitValues[vVarNames][1], mapInitValues[vVarNames][2] );
-    mapVar[vVarNames]->setConstant( TString(vVarNames).Contains("alpha") ? 1 : 0 );
+    mapVar[vVarNames]->setConstant( 0 );
+    if ( vVarNames == "nHi" || vVarNames=="nLow" ) mapVar[vVarNames]->setConstant( 1 );
     mapVar[vVarNames]->Print();
   }
 
@@ -321,15 +348,21 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
     for ( int iEntry=0; iEntry<nentries; iEntry++ ) {
       inTree->GetEntry( iEntry );
 
-
+      unsigned int iBranch = 0;
       for ( auto vBranch : branches ) {
-	
+
+
 	for ( auto vVar : variables ) {
 	  string varName = vBranch + "_" + vVar;
 	  mapVar[vVar]->setVal( mapDouble[varName] );
 	}
+	if ( doXS==1 ) mapVar["weight"]->setVal( mapDouble[vBranch+"_weightXS"] );
 
-	int category = mapBranch.GetVal( vBranch+"_cat" );
+
+	int category = 0;
+	if ( !doXS ) category = mapBranch.GetVal( vBranch+"_cat" );
+	else if ( doXS ==1 ) category = mapBranch.GetVal( vBranch+"_catXS" );
+
 	while ( mapSet[vBranch].size() < (unsigned int) category+1 ) mapSet[vBranch].push_back(0);
 
 	if ( !mapSet[vBranch][0] ) {
@@ -340,22 +373,66 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 	  TString title = TString::Format( "%s_cat%d", vBranch.c_str(), category );
 	  mapSet[vBranch][category] = new RooDataSet( title, title, *setVar,  mapVar["weight"]->GetName() );
 	}
-	mapSet[vBranch].front()->add( *setVar, mapVar["weight"]->getVal() );
-	mapSet[vBranch][category]->add( *setVar, mapVar["weight"]->getVal() );
-      }
+
+
+	double value = mapVar["m_yy"]->getVal()*mapVar["weight"]->getVal();
+	for ( int i = 0; i<category+1; i+=category ) {
+	  // cout << "Test : " << endl;
+	  // cout << i << " " << mArrayMean[0].size() << endl;
+	  // cout << iBranch << " " << mArrayMean[0][0].size() << endl;
+	  mArrayMean[0][i][iBranch]+=value;
+	  mArrayMean[1][i][iBranch]+=value*value;
+	  mArrayMean[2][i][iBranch]+=mapVar["weight"]->getVal();
+	  mapSet[vBranch][i]->add( *setVar, mapVar["weight"]->getVal() );
+	}
+
+
+	if ( iEntry < 1000 ) stream << " " << mapVar["m_yy"]->getVal();
+	++iBranch;
+
+      }//end vBranch
+      if ( iEntry < 1000  ) stream << endl;
     }
 
     delete inTree;
     delete inFile;
   }//end vFileName
+  stream.close();
+
+  // for ( auto vKey : mapSet ) {
+  //   for ( auto vSet : vKey.second ) {
+  //     vSet->Print();
+  //     }}
   cout << "datasets filled" << endl;
+
+  stream.open( (outFileName + "dataStat.txt").c_str(), fstream::out );
+  for ( int iCat = -1; iCat < (int) mArrayMean[0].size(); ++iCat ) {
+    if ( iCat < 0 ) stream << "Category";
+    else stream << categoriesNames[iCat];
+    for ( int iBranch = 0; iBranch < (int) mArrayMean[0][0].size(); ++iBranch ) {
+      for ( int iVar =0; iVar < 2; ++iVar ) {
+	if ( iCat < 0 ) stream << " " << branches[iBranch] << "_" << ( iVar ? "sigma" : "mean" );
+	else {
+	if ( !iVar ) mArrayMean[iVar][iCat][iBranch] /= mArrayMean[2][iCat][iBranch];
+	else mArrayMean[iVar][iCat][iBranch] = sqrt( mArrayMean[iVar][iCat][iBranch]/mArrayMean[2][iCat][iBranch]-mArrayMean[0][iCat][iBranch]*mArrayMean[0][iCat][iBranch] );
+	stream << " " << mArrayMean[iVar][iCat][iBranch];
+	}
+      }
+    }
+    stream << endl;
+  }
+  stream.close();
   //======================================
   //Perform the fits
+
+  ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
+  ROOT::Math::MinimizerOptions::SetDefaultStrategy(1);
+  ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0); 
+  ROOT::Math::MinimizerOptions::SetDefaultPrecision(1e-7); 
+
   TCanvas can;    
   can.SetTopMargin(0.05);
   can.SetRightMargin(0.04);
-
-  HggTwoSidedCBPdf *pdfNom = 0;
 
   //Create all the needed varriables for the pdf and fix the alpha's
   
@@ -364,75 +441,64 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   map<string, vector<RooPlot*>> mapPlot;
 
   for ( auto vBranch : branches ) {
-    cout << vBranch << endl;
 
     HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["m_yy"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
     
     for ( unsigned int iCat = 0; iCat < mapSet[vBranch].size(); iCat++ ) {
       if ( !mapSet[vBranch][iCat] )  continue;
 
-      mapVar["m_yy"]->Print();
-      pdf->Print();
-      cout << "mapSetPrint : " << mapSet[vBranch][iCat] << endl;
-      cout << "vBranch : " << vBranch << endl;
-      cout << "iCat : " << iCat << endl;
-      cout << "size : " <<  mapSet[vBranch].size() << endl;
-      mapSet[vBranch][iCat]->Print();
-      pdf->fitTo( *mapSet[vBranch][iCat] );
-	   
 
+	   
       vector<TObject*> dumVect = { mapSet[vBranch][iCat], pdf };
       vector<string> options = { "latex=" + vBranch, "latexOpt=0.16 0.9" };
-      DrawPlot( mapVar["m_yy"], dumVect, outFileName + vBranch, options );
-      
+      //      DrawPlot( mapVar["m_yy"], dumVect, outFileName + vBranch, options );
 
       TString name = vBranch;
       name.ReplaceAll( "HGamEventInfo_", "");
       name.ReplaceAll( "HGamEventInfo", "");
       name.ReplaceAll( "__1up", "");
       name.ReplaceAll( "__1down", "");
-      string fName = string(name);
-      string nominalName = string( TString::Format( "nominal_%d", iCat ) );
-      //if nominal fill the nominal label of map result
 
-      if ( fName == "" ) {
-      	fName = nominalName;
-      	for ( unsigned int iVar=0; iVar<CBVarNames.size(); iVar++ ) mapResult[fName].push_back(mapVar[CBVarNames[iVar]]->getVal() );
-    	pdfNom = (HggTwoSidedCBPdf*) pdf->Clone( "pdfNom" );
+      string nominalName = "nominal";
+      string fName = (name == "") ? nominalName : string(name);
+      nominalName += "_" + std::to_string( iCat );
+
+      while ( mapPlot[fName].size() <= iCat   ) mapPlot[fName].push_back(0);
+      if ( !mapPlot[fName][iCat] ) {
+	mapPlot[fName][iCat] = mapVar["m_yy"]->frame( 120, 130, 40 );
+	mapPlot[fName][iCat]->UseCurrentStyle();
+	mapPlot[fName][iCat]->SetTitle( "" );
+	mapPlot[fName][iCat]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
+	mapPlot[fName][iCat]->SetYTitle( TString::Format("Entries / %2.3f GeV", (mapPlot[fName][iCat]->GetXaxis()->GetXmax()-mapPlot[fName][iCat]->GetXaxis()->GetXmin())/mapPlot[fName][iCat]->GetNbinsX()) );
+
+	if ( name != "" ) {
+	  mapSet["HGamEventInfo"][iCat]->plotOn( mapPlot[fName][iCat] );
+	  for ( unsigned int iVar=1; iVar<CBVarNames.size(); iVar++ ) mapVar[CBVarNames[iVar]]->setVal( mapResult[nominalName][iVar] );
+	  pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor(kBlack) );
+	}
 
       }
-      else {
-	// 	//Fill the RooPlots
+
+      cout << vBranch << " " << categoriesNames[iCat] << endl;
+      //      pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
+      pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+      pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+      int shift = TString(vBranch).Contains( "__1up" ) ? CBVarNames.size() : 0;
+      mapSet[vBranch][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ), RooFit::MarkerColor( shift ? 2 : 3 ) );
+      pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ) );
+      
 	
-       	//mapVar["m_yy"]->SetName( (fName+"_m_yy").c_str() );
-       	while ( mapPlot[fName].size() <= iCat   ) mapPlot[fName].push_back(0);
-      	if ( !mapPlot[fName][iCat] ) {
-	  mapPlot[fName][iCat] = mapVar["m_yy"]->frame( 120, 130, 55 );
-	  mapPlot[fName][iCat]->UseCurrentStyle();
-	  mapPlot[fName][iCat]->SetTitle( "" );
-	  mapPlot[fName][iCat]->SetXTitle( "m_{#gamma#gamma}" );
-	  mapPlot[fName][iCat]->SetYTitle( "#frac{dN}{dm_{#gamma#gamma}}" );
-	  mapSet["HGamEventInfo"][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( kBlack ), RooFit::MarkerColor( kBlack ) );
-	  pdfNom->plotOn( mapPlot[fName][iCat], RooFit::LineColor(kBlack)  );
-      	}
-
-  	int shift = TString(vBranch).Contains( "__1up" ) ? CBVarNames.size() : 0;
-	mapSet[vBranch][iCat]->Print();
-	mapPlot[fName][iCat]->Print();
-	mapSet[vBranch][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ), RooFit::MarkerColor( shift ? 2 : 3 ) );
-	pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ) );
-
+      fName += string( TString::Format( "_%d", iCat ) );
+      while ( mapResult[fName].size() < 2*CBVarNames.size() ) mapResult[fName].push_back( -99 );
+      for ( unsigned int iVar=1; iVar<CBVarNames.size(); iVar++ ) mapResult[fName][shift+iVar] = mapVar[CBVarNames[iVar]]->getVal();
+      
   	//Print resutls
-  	cout << vBranch << endl;
-  	cout << mapResult[nominalName][SearchVectorBin(string("mean"),CBVarNames)] << " " << mapVar["mean"]->getVal() << endl;
-	cout << mapResult[nominalName][SearchVectorBin(string("sigma"),CBVarNames)] << " " << mapVar["sigma"]->getVal() << endl;
-  	cout << endl;
-	
-  	fName += string( TString::Format( "_%d", iCat ) );	
-  	while ( mapResult[fName].size() < 2*CBVarNames.size() ) mapResult[fName].push_back( -99 );
-  	for ( unsigned int iVar=1; iVar<CBVarNames.size(); iVar++ ) mapResult[fName][shift+iVar] = mapVar[CBVarNames[iVar]]->getVal();
+      cout << vBranch << endl;
+      cout << mapResult[nominalName][SearchVectorBin(string("mean"),CBVarNames)] << " " << mapVar["mean"]->getVal() << endl;
+      cout << mapResult[nominalName][SearchVectorBin(string("sigma"),CBVarNames)] << " " << mapVar["sigma"]->getVal() << endl;
+      cout << endl;
 
-      }
+	//      }
     }
     // delete pdf;
     // pdf = 0;
@@ -441,17 +507,10 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 
 
   //CreateNote
-  cout << "Create Note" << endl;
-  map<string, string> convertNames;
-  convertNames["EG_RESOLUTION_ALL"]= "PER";
-  convertNames["EG_SCALE_ALLCORR"]= "PES";
-  convertNames["EG_SCALE_E4SCINTILLATOR"]= "PES\\_E4SCINTILLATOR";
-  convertNames["EG_SCALE_LARCALIB_EXTRA2015PRE"]= "PES\\_LARCALIB";
+  cout << endl << "Create Note" << endl;
 
 
-  vector<string> categoriesNames = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   multi_array<double, 3>  mArrayResults;
-  cout << mapSet["HGamEventInfo"].size() << " " << branches.size() << endl;
   mArrayResults.resize( extents[2][mapSet["HGamEventInfo"].size()][branches.size()] );
   //category, branch, var
   map<string, double> mapPositionVarResult;
@@ -459,7 +518,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   mapPositionVarResult["sigma"] = 0.78;
   map<string, vector<double> > mapCsv;
   string latexFileName = outFileName + "PhotonSyst.tex";
-  fstream stream( latexFileName, fstream::out );
+  stream.open( latexFileName, fstream::out );
   fstream datacardStream( (outFileName+"datacard.txt").c_str(), fstream::out );
 
   WriteLatexHeader( stream, "Photon Calibration Uncertainties" );
@@ -481,47 +540,49 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
       doMinipage[string(name)]++;
 
       if ( doMinipage[string(name)] == 2 ) {
+	//	mapPlot["nominal"][iCat]->Print();
+	// HggTwoSidedCBPdf *tmp = (HggTwoSidedCBPdf*) mapPlot["nominal"][iCat]->getCurve( "DSCB_Norm[m_yy]" )->Clone();
+	// tmp->plotOn(mapPlot[string(name)][iCat]);
 	mapPlot[string(name)][iCat]->SetMaximum( mapPlot[string(name)][iCat]->GetMaximum()*1.3 );
 	mapPlot[string(name)][iCat]->Draw();
-	myText( 0.16, 0.9, 1, categoriesNames[iCat].c_str() );
-	myLineText( 0.16, 0.86, 1, 1, "nominal", 0.035, 2 );
-	myLineText( 0.16, 0.82, 2, 1, "up", 0.035, 2 );
-	myLineText( 0.16, 0.78, 3, 1, "down", 0.035, 2 );
+	ATLASLabel( 0.16, 0.9, "Internal", 1, 0.05 );
+	myText( 0.16, 0.85, 1, "Simulation", 0.04 );
+	//	myText( 0.16, 0.8, 1, "#sqrt{s}=13TeV, L=1.00 fb^{-1}", 0.04 );
+	myText( 0.16, 0.6, 1, "All processes"  );
+	myText( 0.16, 0.64, 1, categoriesNames[iCat].c_str() );
+	myLineText( 0.16, 0.56, 1, 1, "nominal", 0.035, 2 );
+	myLineText( 0.16, 0.52, 2, 1, "up", 0.035, 2 );
+	myLineText( 0.16, 0.48, 3, 1, "down", 0.035, 2 );
 	
 	vector<string> fluct = {  "down", "up" };
 	
-	PrintVector( CBVarNames );
-	PrintVector( mapResult[nominalName] );
-	
+	// PrintVector( CBVarNames );
+	// PrintVector( mapResult[nominalName] );
 	
 	string dumName = string( name + TString::Format( "_%d", iCat ));
 	myText( 0.5, 0.9, 1, name );
 	myText( 0.5, mapPositionVarResult["mean"], 1, "mean" );
 	myText( 0.5, mapPositionVarResult["sigma"], 1, "sigma" );
-	cout << "startloop" << endl;
 	for ( auto vFluct : fluct ) {
-	  double x = vFluct=="up" ? 0.7 : 0.8;
+	  double x = vFluct=="up" ? 0.65 : 0.8;
 	  int shift = (vFluct=="up" ? mapResult[dumName].size()/2 : 0);
 	  myText( x, 0.86, 1, vFluct.c_str() );
 	  for ( auto vKey : mapPositionVarResult ) {
 	    int meanBin = SearchVectorBin(vKey.first,CBVarNames);
 	    double value = (mapResult[dumName][meanBin+shift]-mapResult[nominalName][meanBin])/mapResult[nominalName][meanBin];
-
+	    value*=100;
 	    unsigned int branchPosInArray = SearchVectorBin( string(TString(vBranch).ReplaceAll( "up", vFluct ).ReplaceAll( "down", vFluct )), branches );
 	    if ( mapVar["mean"]->getVal()==125 ) value = branchPosInArray*(x==0.7 ? 1. : -1.)+100*(vKey.first=="sigma" ? 1 : 0);
-	    cout << "value : " << value << endl;
-	    myText( x, vKey.second, 1, TString::Format( "%3.2f", value*100 ) );
+	    myText( x, vKey.second, 1, TString::Format( "%3.2f %s", value, "%" ) );
 	    mArrayResults[(vKey.first=="sigma" ? 1 : 0)][iCat][branchPosInArray] = value;
-
-
 	  }
 	}
 
 	bool isResolution = TString(vBranch).Contains("RESOLUTION");
 	unsigned int indexUp = SearchVectorBin( string(TString(vBranch).ReplaceAll( "down", "up")), branches );
 	unsigned int indexDown = SearchVectorBin( string(TString(vBranch).ReplaceAll( "up", "down")), branches );
-
-	datacardStream << "ATLAS_"  << (isResolution ? "MRES" : "MSS") << "_EM_" << TString(convertNames[string(name)]).ReplaceAll("\\", "" ) << "= -100 L( " << TString::Format("%2.2f", mArrayResults[isResolution][iCat][indexDown]) << " - " << mArrayResults[isResolution][iCat][indexUp] << " )" << endl;
+	//	name.ReplaceAll( "EG_", "" );//.ReplaceAll( isResolution ? "RESOLUTION_" : "SCALE_", "" );
+	datacardStream << "ATLAS_"  << name << " = -100 L( " << TString::Format("%2.2f - %2.2f", mArrayResults[isResolution][iCat][indexDown], mArrayResults[isResolution][iCat][indexUp] ) << " )" << endl;
 	string plotName = outFileName + dumName + ".pdf";
 	can.SaveAs( plotName.c_str() );
 	stream << "\\begin{minipage}{0.49\\linewidth}" << endl;
@@ -549,7 +610,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   TString linePattern = TString( 'r', mArrayResults.size()*(mArrayResults[0][0].size()-1) );
   // cout << "array size :  " << mArrayResults.size() << " " << mArrayResults[0].size() << " " << mArrayResults[0][0].size() << endl;
   // cout << "linePattern : " << linePattern.Length() << " " << linePattern << endl;
-  csvStream << "\\resizebox{\\linewidth}{!}{%" << endl;
+  csvStream << "\\resizebox{0.7\\linewidth}{!}{%" << endl;
   csvStream << "\\begin{tabular}{|l|" << linePattern.ReplaceAll( TString( 'r', mArrayResults.size() ), TString( 'r', mArrayResults.size()) + "|" ) << "}" << endl << "\\hline" << endl;
   for ( unsigned int iCat = 0; iCat < mArrayResults[0].size(); iCat++ ) {
     if ( !iCat ) {
@@ -562,10 +623,9 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 	name.ReplaceAll( "HGamEventInfo", "");
 	name.ReplaceAll( "__1up", "");
 	if ( name == "" || name.Contains("1down") ) continue;
-	//	name.ReplaceAll("_", "\\_");
-	cout << "convertName :  " << name << " " << convertNames[string(name)] << endl;
-	for ( auto vKey : convertNames ) cout << vKey.first << endl;
-	csvStream << "&\\multicolumn{4}{c|}{"+convertNames[string(name)] + "}";
+	//	name.ReplaceAll( "EG_", "" );
+	name.ReplaceAll( "_", "\\_" );
+	csvStream << "&\\multicolumn{4}{c|}{"+ string(name) + "}";
 	lineVar += "&\\multicolumn{2}{c|}{mean}&\\multicolumn{2}{c|}{sigma}";
 	lineUp += tmpLineUp + tmpLineUp;
       }
@@ -591,7 +651,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
       // cout << endl;
       //      for ( unsigned int iVar = 0; iVar<mArrayResults.size(); iVar++ ) {
 	// if ( iBranch ==  ) continue;
-      csvStream << " & " << TString::Format("%2.2f", mArrayResults[indexVar][iCat][indexBranch]*100);
+      csvStream << " & " << TString::Format("%2.2f", mArrayResults[indexVar][iCat][indexBranch]);
 	//	cout << iVar << " " << iCat << " " << iBranch << " " << mArrayResults[iVar][iCat][iBranch] << endl;
     }
     csvStream << "\\\\" << endl;
@@ -604,38 +664,32 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 
   stream << "\\end{document}" << endl;
   stream.close();
-  string commandLine = "pdflatex -interaction=batchmode " + latexFileName;
+  string commandLine = "pdflatex -interaction=batchmode " + latexFileName + " -output-directory " + outFileName;
   cout << "latexFileName : " << commandLine << endl;
-  system( ("cd " + outFileName).c_str() );
   system( commandLine.c_str() );
   system( commandLine.c_str() );
   system( commandLine.c_str() );
+  system( ( "cp " + StripString(latexFileName) + ".pdf " + outFileName + '.' ).c_str() );
 
 
-
-  //Cleaning Roofit object
-  for ( auto vVect : mapSet ) {
-    for ( auto vSet : vVect.second ) {
-      delete vSet;
-      vSet=0;
+  //Saving mapResult
+  stream.open( (outFileName + "mapResult.txt" ).c_str(), fstream::out ); 
+  stream << "Systematic_Category";
+  for ( auto i=0;i<2;++i) {
+    for ( auto vVar : CBVarNames ) {
+      stream << " " << vVar << "_" << ( i ? "up" : "down" );
     }
-    vVect.second.clear();
   }
-  mapSet.clear();
-  for ( auto vVar : mapVar ) {
-    delete vVar.second;
-    vVar.second=0;
-  }
-  mapVar.clear();
-  for ( auto vPlot : mapPlot ) {
-    for ( auto vFrame : vPlot.second ) {
-      delete vFrame;
-      vFrame = 0;
-    }
-    vPlot.second.clear();
-  }
-  mapPlot.clear();
+  stream << endl;
 
+  for ( auto vKey : mapResult ) {
+    stream << vKey.first;
+    for ( auto vVal : vKey.second ) {
+      stream << " " << vVal;
+    }
+    stream << endl;
+  }
+  stream.close();
   cout << "Went up to the end" << endl;  
   return 0;
 }
