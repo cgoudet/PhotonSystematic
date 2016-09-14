@@ -48,18 +48,19 @@ namespace po = boost::program_options;
 using std::stringstream;
 #define DEBUG 1
 #include <Math/MinimizerOptions.h>
+#include "RooDataHist.h"
 
-int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName = "" , int doXS=0);
+int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName = "" , int doXS=0, int testID = 0);
 vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches, string outFileName );
-void WriteResultTabular( fstream &latexStream, map<string, vector<double>> &mapResult );
-
+//void WriteResultTabular( fstream &latexStream, map<string, vector<double>> &mapResult );
+vector<double> GOF( RooAbsData *data, RooAbsPdf *pdf );
 int main( int argc, char* argv[] ) {
 
   po::options_description desc("LikelihoodProfiel Usage");
 
   vector<string> inFiles;
   string outFileName, branchNamesFile;
-  int mode = 0, doXS=0;
+  int mode = 0, doXS=0, testID=0;
   //define all options in the program
   desc.add_options()
     ("help", "Display this help message")
@@ -68,6 +69,7 @@ int main( int argc, char* argv[] ) {
     ( "mode", po::value<int>( &mode )->default_value(0), "" )
     ( "branchNamesFile", po::value<string>( &branchNamesFile ), "" )
     ( "doXS", po::value<int>( &doXS ), "" )
+    ( "testID", po::value<int>( &testID ), "Identifier to select one of possible test in FitTree method : \n1 : unbinned fit\n2 : only POI is fitted in variations\n3 : fit mass distribution within 120-130\n4 : Fit only mean and sigma for fluctuation (keep alpha fixed)\n" )
     ;
   
   //Define options gathered by position                                                          
@@ -108,7 +110,7 @@ int main( int argc, char* argv[] ) {
     break;
   }
   case 1 :
-    FitTree( inFiles, branchNames, outFileName, doXS );
+    FitTree( inFiles, branchNames, outFileName, doXS, testID );
     break;
 
   }//end switch
@@ -123,7 +125,7 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
 
   //Create the names of all the required branches
   vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
-  vector<string> varNames = { "_m_yy", "_cat", "_weight", "_weightXS", "_catXS", "_pt_yy" };
+  vector<string> varNames = { "_m_yy", "_cat", "_weight", "_weightXS", "_catXS", "_pt_yy", "_DPhi_yy", "_catXSPhi" };
   vector<string> branchNames;
   map<string, double> mapVal;
   for ( auto vBranch : branches ) {
@@ -138,11 +140,10 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
   }
 
   vector<double> XSCatPt = {0., 40., 60., 100., 200., 9999999.};
-  double lumiWeight=1e3;
-  // fstream stream( "CompareEvent.txt", fstream::out | fstream::app  );
-  // stream << "process";
-  // for ( auto vName : branches ) stream << " " << vName << ( TString(vName).Contains( "1down" ) ? " " + TString(vName).ReplaceAll("1down", "asym" ) : "" );
-  // stream << endl;
+  double pi = 3.14159;
+  vector<double> XSCatPhi = {-100, 0, pi/3., 2*pi/3, 5*pi/6, pi };
+  double lumiWeight=1e4;//Normalize total events to 10fb-1
+  lumiWeight=1e3;
   //GetThe weights for the datasets
   map<string, double> mapDatasetWeights;
 
@@ -244,6 +245,11 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
 	while ( mapVal[vName+"_pt_yy"] > XSCatPt[XSCat] ) ++XSCat; 
 	mapVal[vName+"_catXS"] = XSCat;
 
+	XSCat=0;
+	mapVal[vName+"_DPhi_yy"] = mapEvent[vName]->auxdata<float>( "Dphi_y_y" )/1e3;
+	while ( mapVal[vName+"_DPhi_yy"] > XSCatPhi[XSCat] ) ++XSCat; 
+	mapVal[vName+"_catXSPhi"] = XSCat;
+
 	  //	ss << " " << mapVal[vName+"_m_yy"];
 	// if ( TString(vName).Contains( "__1down" ) ) {
 	//   double diffDown = mapVal[branches[0]+"_m_yy"] - mapVal[vName+"_m_yy"];
@@ -262,9 +268,10 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
       if ( ( totEntry%500000==0 && outTree->GetEntries() ) || ( vFileName == inFileNames.back() && i_event==nentries-1 ) ) {
 	string dumName = outFileName;
 	bool isFB1 = lumiWeight == 1e3;
-	bool isFix = TString(vFileName).Contains("PhotonSysFix");
-	cout << isFB1 << " " << isFix << endl;
-	dumName = string( TString::Format("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/%s%s%s_%d.root", isFB1 ? "FB1/" : "", isFix ? "PhotonSysFix/":"", StripString(dumName).c_str(), nFile ) );
+	// bool isFix = TString(vFileName).Contains("PhotonSysFix");
+	// cout << isFB1 << " " << isFix << endl;
+	//	dumName = string( TString::Format("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/%s%s%s_%d.root", isFB1 ? "FB1/" : "", isFix ? "PhotonSysFix/":"", StripString(dumName).c_str(), nFile ) );
+	dumName = string( TString::Format("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/%s%s_%d.root", isFB1 ? "FB1_": "", StripString(dumName).c_str(), nFile ) );
 	outFiles.push_back( dumName );
 	cout << "saving : " << dumName << endl;
 	cout << "entries : " << outTree->GetEntries() << endl;
@@ -283,7 +290,7 @@ vector<string> ReadMxAOD( vector<string> &inFileNames, vector<string> &branches,
 }
 //######################################################
 
-int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName, int doXS ) {
+int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName, int doXS, int testID ) {
   string defaultOutputDirectory = "/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/";
   if ( outFileName == "" ) outFileName = defaultOutputDirectory;
   if ( outFileName != "" && outFileName.back()!='/' ) outFileName+="/";
@@ -299,17 +306,15 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   map<string, RooRealVar*> mapVar;
 
   fstream stream;
-  stream.open( (outFileName + "CompareFits.txt").c_str(), fstream::out );
-  for ( auto vName : branches ) stream << " " << vName;
-  stream << endl;
   vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
   map<string, TH1D*> mapHistAsym;
   for ( auto vProc : processes ) mapHistAsym[vProc] = new TH1D( "histAsym", "histAsym", 100, -1, 1 );
   vector<string> categoriesNames;
   if ( doXS == 0 ) categoriesNames = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
+  else if ( doXS == 2 ) categoriesNames = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
 
-  multi_array<double, 3>  mArrayMean;
+  multi_array<double, 3>  mArrayMean; //hold the exact mean and rms of the weighted dataset
   mArrayMean.resize( extents[3][categoriesNames.size()][branches.size()] );
 
 
@@ -320,8 +325,8 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   mapInitValues["mean"]={ 125, 124, 126 };
   mapInitValues["m_yy"]= { 126, 105, 160 };
   mapInitValues["sigma"]={1.5, 1, 3 };
-  mapInitValues["alphaHi"]= {1.6, 0, 10 };
-  mapInitValues["alphaLow"]={1.3, 0, 10};
+  mapInitValues["alphaHi"]= {1.6, 0, 5 };
+  mapInitValues["alphaLow"]={1.3, 0, 5};
   mapInitValues["nLow"]={9, 0, 100};
   mapInitValues["nHi"]={5, 0, 100};
 
@@ -331,6 +336,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
     if ( vVarNames == "nHi" || vVarNames=="nLow" ) mapVar[vVarNames]->setConstant( 1 );
     mapVar[vVarNames]->Print();
   }
+  mapVar["m_yy"]->setBins(220);
 
   RooArgSet *setVar = new RooArgSet( *mapVar["m_yy"], *mapVar["weight"] );
   cout << "branches" << endl;
@@ -342,7 +348,6 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
     TTree *inTree = (TTree*) inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() );
     mapBranch.LinkTreeBranches( inTree );
     map<string, double> &mapDouble = mapBranch.GetMapDouble();
-
     int nentries = inTree->GetEntries();
     cout << "nentries : " << nentries << endl;
     for ( int iEntry=0; iEntry<nentries; iEntry++ ) {
@@ -350,18 +355,17 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 
       unsigned int iBranch = 0;
       for ( auto vBranch : branches ) {
-
-
 	for ( auto vVar : variables ) {
 	  string varName = vBranch + "_" + vVar;
 	  mapVar[vVar]->setVal( mapDouble[varName] );
 	}
-	if ( doXS==1 ) mapVar["weight"]->setVal( mapDouble[vBranch+"_weightXS"] );
+	if ( doXS ) mapVar["weight"]->setVal( mapDouble[vBranch+"_weightXS"] );
 
 
 	int category = 0;
 	if ( !doXS ) category = mapBranch.GetVal( vBranch+"_cat" );
 	else if ( doXS ==1 ) category = mapBranch.GetVal( vBranch+"_catXS" );
+	else if ( doXS == 2 ) category = mapBranch.GetVal( vBranch+"_catXSPhi" );
 
 	while ( mapSet[vBranch].size() < (unsigned int) category+1 ) mapSet[vBranch].push_back(0);
 
@@ -377,9 +381,6 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 
 	double value = mapVar["m_yy"]->getVal()*mapVar["weight"]->getVal();
 	for ( int i = 0; i<category+1; i+=category ) {
-	  // cout << "Test : " << endl;
-	  // cout << i << " " << mArrayMean[0].size() << endl;
-	  // cout << iBranch << " " << mArrayMean[0][0].size() << endl;
 	  mArrayMean[0][i][iBranch]+=value;
 	  mArrayMean[1][i][iBranch]+=value*value;
 	  mArrayMean[2][i][iBranch]+=mapVar["weight"]->getVal();
@@ -387,24 +388,17 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 	}
 
 
-	if ( iEntry < 1000 ) stream << " " << mapVar["m_yy"]->getVal();
 	++iBranch;
 
       }//end vBranch
-      if ( iEntry < 1000  ) stream << endl;
     }
 
     delete inTree;
     delete inFile;
   }//end vFileName
-  stream.close();
 
-  // for ( auto vKey : mapSet ) {
-  //   for ( auto vSet : vKey.second ) {
-  //     vSet->Print();
-  //     }}
+
   cout << "datasets filled" << endl;
-
   stream.open( (outFileName + "dataStat.txt").c_str(), fstream::out );
   for ( int iCat = -1; iCat < (int) mArrayMean[0].size(); ++iCat ) {
     if ( iCat < 0 ) stream << "Category";
@@ -414,7 +408,11 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 	if ( iCat < 0 ) stream << " " << branches[iBranch] << "_" << ( iVar ? "sigma" : "mean" );
 	else {
 	if ( !iVar ) mArrayMean[iVar][iCat][iBranch] /= mArrayMean[2][iCat][iBranch];
-	else mArrayMean[iVar][iCat][iBranch] = sqrt( mArrayMean[iVar][iCat][iBranch]/mArrayMean[2][iCat][iBranch]-mArrayMean[0][iCat][iBranch]*mArrayMean[0][iCat][iBranch] );
+	else {
+	  mArrayMean[iVar][iCat][iBranch] = sqrt( mArrayMean[iVar][iCat][iBranch]/mArrayMean[2][iCat][iBranch]-mArrayMean[0][iCat][iBranch]*mArrayMean[0][iCat][iBranch] );
+	  // cout << mArrayMean[iVar][iCat][iBranch] << " " << mArrayMean[2][iCat][iBranch] << " " << mArrayMean[iVar][iCat][iBranch]/mArrayMean[2][iCat][iBranch] << endl;
+	  // cout << mArrayMean[0][iCat][iBranch] << " " << mArrayMean[0][iCat][iBranch]*mArrayMean[0][iCat][iBranch] << endl;
+	}
 	stream << " " << mArrayMean[iVar][iCat][iBranch];
 	}
       }
@@ -424,7 +422,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   stream.close();
   //======================================
   //Perform the fits
-
+  cout << "Perform fit " << endl;
   ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
   ROOT::Math::MinimizerOptions::SetDefaultStrategy(1);
   ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0); 
@@ -448,6 +446,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
       if ( !mapSet[vBranch][iCat] )  continue;
 
 
+      double sumEntries = 0;
 	   
       vector<TObject*> dumVect = { mapSet[vBranch][iCat], pdf };
       vector<string> options = { "latex=" + vBranch, "latexOpt=0.16 0.9" };
@@ -463,6 +462,7 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
       string fName = (name == "") ? nominalName : string(name);
       nominalName += "_" + std::to_string( iCat );
 
+
       while ( mapPlot[fName].size() <= iCat   ) mapPlot[fName].push_back(0);
       if ( !mapPlot[fName][iCat] ) {
 	mapPlot[fName][iCat] = mapVar["m_yy"]->frame( 120, 130, 40 );
@@ -473,19 +473,57 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 
 	if ( name != "" ) {
 	  mapSet["HGamEventInfo"][iCat]->plotOn( mapPlot[fName][iCat] );
+	  cout << name << " " << mapSet["HGamEventInfo"][iCat]->sumEntries( "m_yy<130 && m_yy>120" );
+	  cout << "sumEntries : " << sumEntries << endl;
 	  for ( unsigned int iVar=1; iVar<CBVarNames.size(); iVar++ ) mapVar[CBVarNames[iVar]]->setVal( mapResult[nominalName][iVar] );
 	  pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor(kBlack) );
 	}
 
       }
+      cout << vBranch << " " << categoriesNames[iCat] << " " << name << endl;
+      
+      string varName = "";
+      if ( name.Contains("RESOLUTION") ) varName = "sigma";
+      else varName="mean";
+    
+      //if testing POI, fix all non poi 
+      for ( unsigned int iVar=1; iVar<CBVarNames.size(); iVar++ ) {
+	if (  CBVarNames[iVar]=="m_yy" || CBVarNames[iVar]=="weight" ) continue;
+	if ( testID != 5 && (CBVarNames[iVar] == "nHi" || CBVarNames[iVar]=="nLow") ) continue;
 
-      cout << vBranch << " " << categoriesNames[iCat] << endl;
-      //      pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
-      pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-      pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+	if ( name == ""  ) mapVar[CBVarNames[iVar]]->setConstant( 0 );
+	else if ( testID!=2 ) {
+	  mapVar[CBVarNames[iVar]]->setConstant( 1 );
+	  mapVar[CBVarNames[iVar]]->setVal( mapResult[nominalName][iVar] );
+	}
+      }    
+      mapVar[varName]->setConstant(0);
+      if ( testID==4 ) mapVar[varName=="mean" ? "sigma" : "mean" ]->setConstant(0);
+      RooDataHist *binnedClone = 0;
+      if (testID == 1) {
+
+	binnedClone = mapSet[vBranch][iCat]->binnedClone();
+	cout << "binnedClone" << endl;
+	binnedClone->Print();
+      }
+
+      int nFits = 3;
+      double diff = 1;
+      do {
+	diff = mapVar[varName]->getVal();
+	if ( testID == 3 ) pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
+	else if (testID == 1 ) pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+	else pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+	diff = ( diff - mapVar[varName]->getVal() )/diff;
+      }
+      while ( --nFits && diff > 1e-3 );
+      //      GOF( mapSet[vBranch][iCat], pdf );
+
       int shift = TString(vBranch).Contains( "__1up" ) ? CBVarNames.size() : 0;
       mapSet[vBranch][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ), RooFit::MarkerColor( shift ? 2 : 3 ) );
       pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ) );
+      cout << "sumEntries : " << mapSet[vBranch][iCat]->sumEntries() << endl;
+      mapSet[vBranch][iCat]->Print();
       
 	
       fName += string( TString::Format( "_%d", iCat ) );
@@ -673,19 +711,19 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
 
 
   //Saving mapResult
-  stream.open( (outFileName + "mapResult.txt" ).c_str(), fstream::out ); 
+  stream.open( (outFileName + "mapResult.csv" ).c_str(), fstream::out ); 
   stream << "Systematic_Category";
   for ( auto i=0;i<2;++i) {
     for ( auto vVar : CBVarNames ) {
-      stream << " " << vVar << "_" << ( i ? "up" : "down" );
+      stream << "," << vVar << "_" << ( i ? "up" : "down" );
     }
   }
   stream << endl;
-
+  PrintMapKeys( mapResult );
   for ( auto vKey : mapResult ) {
     stream << vKey.first;
     for ( auto vVal : vKey.second ) {
-      stream << " " << vVal;
+      stream << "," << vVal;
     }
     stream << endl;
   }
@@ -694,3 +732,28 @@ int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFi
   return 0;
 }
 
+//######################################################
+vector<double> GOF( RooAbsData *data, RooAbsPdf *pdf ) {
+
+  vector<double> outVect(1,0);
+  // cout << "outVectSize : " << outVect.size() << endl;
+
+  // unsigned int numEntries = data->numEntries();
+  // cout << "numEntries : " << numEntries << endl;
+  // data->Print();
+  // data->get()->Print();
+
+  // for ( unsigned int iEntry = 0; iEntry<numEntries; iEntry++ ) {
+  //   if (iEntry > 5 ) continue;
+  //   double mass =  data->get( iEntry )->first()->getVal();
+  //   double weight = data->weight();
+
+  //   //do chi2
+  //   double chi = 
+  //   outVect[0] = 
+  // }
+
+  exit(0);
+  return outVect;
+
+}

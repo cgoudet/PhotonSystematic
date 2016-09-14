@@ -2,8 +2,9 @@ import os
 import sys
 import subprocess as sub
 import numpy as np
-inFileName='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/h013/mapResult.txt'
-outFileName='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/h013/datacard_dum.txt'
+directory='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/h013_PhotonSysFix/'
+inFileName=directory+'mapResult.txt'
+outFileName=directory+'datacard_dum.txt'
 
 
 #Create dictionnary with inputs
@@ -27,10 +28,17 @@ datacardFile=open(outFileName,'w')
 def WriteSyst( key, cat ) :
     nVarCol = 0 if 'SCALE' in key else 2
     nominal = mapVals['nominal_'+str(cat)][nVarCol]
+
+    valDown = 100*(mapVals[key+'_'+str(cat)][nVarCol]-nominal)/nominal
+    valUp = 100*(mapVals[key+'_'+str(cat)][nVarCol+1]-nominal)/nominal
+    symVal = ( valUp - valDown ) /2 
+    # print( 100*( mapVals[key+'_'+str(cat)][nVarCol] -nominal )/nominal )
+    # print( 100*( mapVals[key+'_'+str(cat)][nVarCol+1] -nominal)/nominal )
+    #    print symVal
     strOut = ( 'ATLAS_'+key + ' = -100 L ( '
-               + '{0:.2f}'.format( ( 1 if nVarCol else -1 ) *100*( mapVals[key+'_'+str(cat)][nVarCol+( 0 if nVarCol else 1 )] - nominal ) / nominal)
+               + '{0:.2f}'.format( valDown if nVarCol else -symVal )
                + ' - '
-               + '{0:.2f}'.format( 100*( mapVals[key+'_'+str(cat)][nVarCol+1] - nominal ) / nominal)
+               + '{0:.2f}'.format( valUp if nVarCol else symVal )
                + ' )'
                )
     return strOut
