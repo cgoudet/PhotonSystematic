@@ -47,13 +47,12 @@ EL::StatusCode TutorialAnalysis::createOutput()
   m_output_tree = new TTree("output","output");
   m_output_tree->SetDirectory(file);
 
-  vector<string> var = { "eta", "pt", "phi" };
-  for ( auto iPhoton = 0; iPhoton<2; iPhoton++ ) {
-    for ( auto vMap : var ) {
-      string sPhoton = string( TString::Format( "%s_%d", vMap.c_str(), iPhoton ) );
-      m_mapTree[sPhoton] = 0;
-      m_output_tree->Branch( sPhoton.c_str(), &m_mapTree[sPhoton] );
-    }
+
+
+  vector<string> var = { "mass", "coupCateg" };
+  for ( auto vMap : var ) {
+    m_mapTree[vMap] = 0;
+    m_output_tree->Branch( vMap.c_str(), &m_mapTree[vMap] );
   }
 
   return EL::StatusCode::SUCCESS;

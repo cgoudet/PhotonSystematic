@@ -1,0 +1,37 @@
+outFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/testOut
+analysis=Couplings
+fitMethod=fitAll_fitPOI
+
+categoriesName = Inclusive 
+categoriesName=ggH_CenLow 
+categoriesName=ggH_CenHigh 
+categoriesName=ggH_FwdLow 
+categoriesName=ggH_FwdHigh 
+categoriesName=VBFloose 
+categoriesName=VBFtight 
+categoriesName=VHhad_loose 
+categoriesName=VHhad_tight 
+categoriesName=VHMET 
+categoriesName=VHlep 
+categoriesName=VHdilep 
+categoriesName=ttHhad 
+categoriesName=ttHlep
+
+NPName=HGamEventInfo
+NPName=HGamEventInfo_EG_RESOLUTION_ALL__1up
+NPName=HGamEventInfo_EG_RESOLUTION_ALL__1down
+NPName=HGamEventInfo_EG_SCALE_ALL__1up
+NPName=HGamEventInfo_EG_SCALE_ALL__1down
+
+#Names of the root files containing signal MC in TTree
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.MGPy8_tHjb125_yt_plus1.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.PowhegPy8_VBFH125.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.PowhegPy8_ggH125.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.PowhegPy8_ggH125.MxAODPhotonSys.p2669.h013_1.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.Pythia8_WH125.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.Pythia8_ZH125.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.aMCnloHwpp_tWH125_yt_plus1.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.aMCnloPy8_NNPDF23_ttH125.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.aMCnloPy8_NNPDF23_ttH125.MxAODPhotonSys.p2669.h013_1.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.aMCnloPy8_bbH125_yb2.MxAODPhotonSys.p2669.h013_0.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/mc15c.aMCnloPy8_bbH125_ybyt.MxAODPhotonSys.p2669.h013_0.root
