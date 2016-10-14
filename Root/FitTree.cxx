@@ -44,7 +44,7 @@ int FitTree( string inConfFileName ) {
   po::options_description configOptions("configOptions");
   configOptions.add_options()
     ( "rootFileName", po::value< vector< string > >( &rootFilesName )->multitoken(), "ROOT Files containing the ntuples. Files must contains a TTree with the branches cited in branchName" )
-    ( "outFileName", po::value<string>( &outFileName ), "Name of the ouput. The extension will be removed." )
+    ( "outFileName", po::value<string>( &outFileName )->default_value("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/dum"), "Name of the ouput. The extension will be removed." )
     ( "categoriesName", po::value<vector<string>>( &categoriesName )->multitoken(), "Names of the categories to consider for NP determination" )
     ( "nBins", po::value<unsigned int>( &nBins )->default_value(220), "Number of bins for binned fit." )
     ( "NPName", po::value<vector<string>>( &NPName ), "Name of the branches to read" )
@@ -58,9 +58,13 @@ int FitTree( string inConfFileName ) {
   po::notify( vm );
 
   if ( !rootFilesName.size() ) { cout << "FitTree : No input files provided in " << inConfFileName << endl; exit(0); }
-  if ( !NPName.size() ) { cout << "FitTree : No branches name profided." << endl; exit(0); }
+
   if ( outFileName == "" ) { cout << "FiTree : No outFileName provided in " << inConfFileName << endl; exit(0); }
   outFileName = StripString( outFileName, 0, 1 );
+  system( ("mkdir " + outFileName).c_str() );
+  if ( outFileName.back() != '/' ) outFileName+="/";
+
+  if ( !NPName.size() ) { cout << "FitTree : No branches name profided." << endl; exit(0); }
 
   vector<string>  allowedAnalyses = {"Couplings", "DiffXS", "DiffXSPhi" };
   if ( SearchVectorBin( analysis, allowedAnalyses ) == allowedAnalyses.size() ) { cout << "Wrong analysis provided : " << analysis << endl << "Choose between : "; PrintVector( allowedAnalyses ); exit(0); }
@@ -169,7 +173,7 @@ int FitTree( string inConfFileName ) {
 
   cout << "datasets filled" << endl;
 
-  stream.open( (outFileName +"_dataStat.txt").c_str(), fstream::out );
+  stream.open( (outFileName +"dataStat.txt").c_str(), fstream::out );
   for ( int iCat = -1; iCat < (int) mArrayMean[0].size(); ++iCat ) {
     if ( iCat < 0 ) stream << "Category";
     else stream << categoriesName[iCat];
@@ -273,7 +277,8 @@ int FitTree( string inConfFileName ) {
   	// if ( testID == 3 ) pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
   	// else if (testID == 1 ) pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
   	// else pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-	pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+	//	pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+	pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
   	diff = ( diff - mapCBParameters[varName]->getVal() )/diff;
       }
       while ( --nFits && diff > 1e-3 );
