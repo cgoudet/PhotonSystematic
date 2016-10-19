@@ -11,12 +11,13 @@ int main( int argc, char* argv[] ) {
   po::options_description desc("LikelihoodProfiel Usage");
 
   string inConfFile;
-  int mode;
+  int mode, debug;
   //define all options in the program
   desc.add_options()
     ( "help", "Display this help message")
     ( "inConfFile", po::value<string>(&inConfFile), "" )
     ( "mode", po::value<int>( &mode )->default_value(0), "" )
+    ( "debug", po::value<int>( &debug )->default_value(0), "" )
     // ( "testID", po::value<int>( &testID ), "Identifier to select one of possible test in FitTree method : \n1 : unbinned fit\n2 : only POI is fitted in variations\n3 : fit mass distribution within 120-130\n4 : Fit only mean and sigma for fluctuation (keep alpha fixed)\n" )
     ;
   
@@ -32,7 +33,7 @@ int main( int argc, char* argv[] ) {
   if (vm.count("help")) {cout << desc; return 0;}
   //=============================================
 
-  if ( mode == 0 ) ReadMxAOD( inConfFile );
+  if ( mode == 0 ) ReadMxAOD( inConfFile, debug );
   else if ( mode == 1 ) FitTree( inConfFile );
 
   return 0;
