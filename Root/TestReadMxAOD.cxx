@@ -3,7 +3,11 @@
 #include "PhotonSystematic/ReadMxAOD.h"
 
 #include "TFile.h"
+#include "xAODRootAccess/TEvent.h"
+#include "xAODEventInfo/EventInfo.h"
+#include "xAODRootAccess/Init.h"
 
+#include <stdexcept>
 #include <boost/test/unit_test.hpp>
 #include <algorithm>
 #include <iterator>
@@ -12,6 +16,11 @@
 using std::ostream_iterator;
 using std::cout;
 using std::endl;
+using std::vector;
+using std::map;
+using std::string;
+using std::list;
+using std::runtime_error;
 // The name of the suite must be a different name to your class                                                                                                                                      
 BOOST_AUTO_TEST_SUITE( ReadMxAODSuite )
 
@@ -53,11 +62,10 @@ BOOST_AUTO_TEST_CASE(UpdateDuplicateListTest ) {
   list<string> testList = { "var2", "var3", "var4", "var5_yy", "var6" };
 
   UpdateDuplicateList( outList, mapVal, defaultValues );
-  BOOST_CHECK_EQUAL( outList.size(), testList.size() );
-  BOOST_CHECK( std::equal( outList.begin(), outList.end(), testList.begin() ) );
+  BOOST_CHECK( outList == testList );
 }
 
-BOOST_AUTO_TEST_CASE(MxAODTest ) {
+BOOST_AUTO_TEST_CASE(MxAODTest) {
   string inFileName = "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/group.phys-higgs.ggH.9486788._000049.MxAOD.root";
   TFile testFile( inFileName.c_str() );
 
@@ -66,12 +74,49 @@ BOOST_AUTO_TEST_CASE(MxAODTest ) {
 
   vector<string> rootFilesName = { inFileName };
   map<string,double> weights;
+  map<string,double> testWeights;
+  testWeights["ggH"] = 1.89226933593750000e+04;
   TotalSumWeights( rootFilesName, weights );
   BOOST_CHECK_EQUAL( static_cast<int>(weights.size()), 1 );
   BOOST_CHECK_NO_THROW( weights.at("ggH") );
   BOOST_CHECK( (weights.at("ggH")-1.89226933593750000e+04)/1.89226933593750000e+04 < 1e-10 );
+ 
+  if ( !xAOD::Init().isSuccess() ) throw runtime_error( "xAOD Init Failed" );
+  xAOD::TEvent tevent(xAOD::TEvent::kClassAccess);
+  if ( !tevent.readFrom( &testFile ).isSuccess() ) throw runtime_error( "xAOD readFrom failed : " + string(testFile.GetName()) );
+  string branchName = "HGamEventInfo";
+  const xAOD::EventInfo* eventInfo;
 
+  if ( !tevent.retrieve( eventInfo, branchName.c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : "+branchName );
+  
+  weights.clear();  
+  const vector<string> varsName = { "m_yy", "pt_yy","catCoup","catXS","DPhi_yy","weightXS","catXSPhi","weight"};
+  bool keepEvent=0;
+  for ( auto it = varsName.begin(); it!=varsName.end(); ++it ) {
+    keepEvent = keepEvent || FillMapFromEventInfo( branchName + "_" + *it, weights, eventInfo, 1, 0 );
+  }
+
+  //Define the expected output map
+  testWeights.clear();
+  testWeights["HGamEventInfo_weightXS"]=0;
+  testWeights["HGamEventInfo_weight"]=0;
+  //Code does not create a case for default value
+  // testWeights["HGamEventInfo_m_yy"]=-99;
+  // testWeights["HGamEventInfo_pt_yy"]=-99;
+  // testWeights["HGamEventInfo_DPhi_yy"]=-99;
+  // testWeights["HGamEventInfo_catXSPhi"]=-99;
+  // testWeights["HGamEventInfo_catXS"]=-99;
+  // testWeights["HGamEventInfo_catCoup"]=-99;
+
+  BOOST_CHECK_EQUAL( keepEvent, 0 );
+  BOOST_CHECK_EQUAL( testWeights.size(), weights.size() );
+  BOOST_CHECK( testWeights == weights );
   testFile.Close();
+}
+
+BOOST_AUTO_TEST_CASE(GetAnalysisVariablesTest) {
+  const list<string> analVar = { "m_yy", "pt_yy","catCoup","catXS","DPhi_yy","weightXS","catXSPhi","weight"};
+  BOOST_CHECK( GetAnalysisVariables() == analVar );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

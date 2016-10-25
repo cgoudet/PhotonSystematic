@@ -7,17 +7,14 @@
 #include <string>
 #include <map>
 #include <list>
-using std::map;
-using std::string;
-using std::list;
-using std::vector;
+
 /*\brief Read an MxAOD of systematic variation a print a set a variable for each variation into a ntuple
   \param inConfFileName Input configuration file in boost format. (more below)
   \param debuf Debug mode. 3 modes are defined : 0 user mode, 1 medium printing over full MxAOD inputs, 2 maximum print over 10 events
 
   
  */
-int ReadMxAOD( const string &inConfFileName, int debug = 0 );
+int ReadMxAOD( const std::string &inConfFileName, int debug = 0 );
 
 /*\brief Reweight diphton events according to the pt of the system
   \param initPt Truth Pt of the diphoton system.
@@ -30,11 +27,11 @@ double ReweightPtGgh( double const initPt );
   \return Name of the noDalitz_weighted histogram
   Tested
  */
-string FindNoDalitzHist( const TFile *inFile );
+std::string FindNoDalitzHist( const TFile *inFile );
 
 /*\brief Fill a map with the read values of a tevent
  */
-bool FillMapFromEventInfo( const string &outName, map<string,double> &mapVal, const xAOD::EventInfo* eventInfo, double commonWeight=1, bool isCommon=0 );
+bool FillMapFromEventInfo( const std::string &outName, std::map<std::string,double> &mapVal, const xAOD::EventInfo* eventInfo, double commonWeight=1, bool isCommon=0 );
 
 /*\brief Look in a map for variables that may have different values in different branches and remove them
   \param dumplicateListName list all the variables
@@ -44,7 +41,7 @@ bool FillMapFromEventInfo( const string &outName, map<string,double> &mapVal, co
   The code assume that the map keys are in the form branch_variable with no underscore in variable except for _yy. 
   Tested
 */
-void UpdateDuplicateList( list<string> &duplicateListName, const map<string, double> &mapVal, const map<string, double> &defaultValues );
+void UpdateDuplicateList( std::list<std::string> &duplicateListName, const std::map<std::string, double> &mapVal, const std::map<std::string, double> &defaultValues );
 
 /*\brief Sum the values of the 3rd bin in noDalitz_weighted histograms in all input files, defenciating process thourh name
   \param rootFilesName names of the input files
@@ -53,12 +50,20 @@ void UpdateDuplicateList( list<string> &duplicateListName, const map<string, dou
   The process of a file is obtained by looking for the process name in the file name.
   Tested.
  */
-void TotalSumWeights( const vector<string> &rootFilesName, map<string,double> &datasetWeights );
+void TotalSumWeights( const std::vector<std::string> &rootFilesName, std::map<std::string,double> &datasetWeights );
 
 /*\brief Extract variable name in a string
 \param inName  string to parse
 The code assumes the string writtent as branchName_varaible wit no underscore in variable execpt for final _yy.
 Tested.
 */
-string ExtractVariable( const string &inName );
+std::string ExtractVariable( const std::string &inName );
+
+/*\brief return the list of variables used in the analysis
+  Tested.
+ */
+inline const std::list<std::string> GetAnalysisVariables() { 
+  static const std::list<std::string> vect = { "m_yy", "pt_yy","catCoup","catXS","DPhi_yy","weightXS","catXSPhi","weight"};
+  return vect;
+}
 #endif

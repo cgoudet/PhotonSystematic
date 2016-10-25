@@ -1,15 +1,7 @@
 outDirectory=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/
-varName=m_yy
-varName=pt_yy
-varName=catCoup
-varName=catXS
-varName=DPhi_yy
-varName=weightXS
-varName=catXSPhi
-varName=weight
 
 
-rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000001.MxAOD.root
+#rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000001.MxAOD.root
 # rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000002.MxAOD.root
 # rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000003.MxAOD.root
 # rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000004.MxAOD.root
@@ -57,7 +49,7 @@ rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc
 # rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000046.MxAOD.root
 # rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000047.MxAOD.root
 # rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000048.MxAOD.root
-# rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000049.MxAOD.root
+rootFileName=/sps/atlas/c/cgoudet/Hgam/Inputs/MxAODFullModel/group.phys-higgs.mc15c.PowhegPy8_ggH125.MxAODPhotonAllSys.p2669.h013_cjmeyer8_MxAOD.root/group.phys-higgs.9486788._000049.MxAOD.root
 
 containerName=HGamEventInfo_EG_RESOLUTION_MATERIALCALO__1down
 containerName=HGamEventInfo_EG_RESOLUTION_MATERIALCALO__1up

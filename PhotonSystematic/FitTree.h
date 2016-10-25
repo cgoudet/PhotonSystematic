@@ -2,8 +2,9 @@
 #define FITTREE_H
 
 #include <string>
-using std::string;
+#include <map>
 
-int FitTree( string inConfFileName );
+int FitTree( std::string inConfFileName );
+void FillInitialValuesFitParam( std::map<std::string,std::vector<double>> &mapInitValues );
 
 #endif

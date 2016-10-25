@@ -1,5 +1,7 @@
 #include "PhotonSystematic/ReadMxAOD.h"
 #include "PlotFunctions/Foncteurs.h"
+#include "PlotFunctions/MapBranches.h"
+#include "PlotFunctions/SideFunctions.h"
 
 #include "TKey.h"
 #include "TIterator.h"
@@ -7,8 +9,6 @@
 #include "TTree.h"
 #include "xAODRootAccess/TEvent.h"
 #include "xAODEventInfo/EventInfo.h"
-#include "PlotFunctions/MapBranches.h"
-#include "PlotFunctions/SideFunctions.h"
 #include "TCanvas.h"
 #include "RooPlot.h"
 #include "RooGaussian.h"
@@ -16,7 +16,6 @@
 #include "RooRealVar.h"
 #include "RooArgSet.h"
 #include "xAODRootAccess/Init.h"
-#include "RooDataHist.h"
 
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
@@ -40,7 +39,8 @@ using namespace std;
 
 //#################
 int ReadMxAOD( const string &inConfFileName, int debug ) {
-  vector<string> rootFilesName, containersName, commonVarsName;
+  vector<string> rootFilesName, commonVarsName;
+  vector<string> containersName;
   string outDirectory;
   po::options_description desc("LikelihoodProfiel Usage");
   //define all options in the program
@@ -48,7 +48,6 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
     ( "help", "Display this help message")
     ( "rootFileName", po::value<vector<string>>( &rootFilesName )->multitoken(), "Input ROOT MxAOD files" )
     ( "containerName", po::value<vector<string>>( &containersName )->multitoken(), "Names of the containers to copy" )
-    //    ( "varName", po::value<vector<string>>( &varsName )->multitoken(), "Names of the variables in containers to copy" )
     ( "commonVarName", po::value<vector<string>>( &commonVarsName )->multitoken(), "Names of the variables in containers to copy" )
     ( "outDirectory", po::value<string>( &outDirectory ), "Name of the outputDirectory : File names will be generated automatically" )
     ;
@@ -61,7 +60,8 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
   
   if (vm.count("help")) {cout << desc; return 0;}
   //=============================================
-  xAOD::Init();
+  if ( !xAOD::Init().isSuccess() ) throw runtime_error( "xAOD Init Failed" );
+
   if ( outDirectory.back() != '/' ) outDirectory+="/";
   ReplaceString repStr("HGamEventInfo_");
   /*Create the names of all the required branches
@@ -69,18 +69,18 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
     For the output variables, the common variables have no prefix and the rest have the container name minus the HGamEventInfo_ prefix
   */
 
-  const vector<string> varsName = { "m_yy", "pt_yy","catCoup","catXS","DPhi_yy","weightXS","catXSPhi","weight"};
+  const list<string> varsName = GetAnalysisVariables();
 
 
   //Stores the prefix output for a given container
   map<string,string> branchMatching;
   for ( auto vName : containersName ) branchMatching[vName] = repStr(vName);
 
-  vector<vector<string>> inCombineNames;
-  inCombineNames.push_back( containersName );
+  list<list<string>> inCombineNames( 1, list<string>() );
+  copy( containersName.begin(), containersName.end(), back_inserter( *inCombineNames.begin() ) );
   inCombineNames.push_back( varsName );
 
-  vector<string> outBranchesName = CombineNames( inCombineNames );
+  list<string> outBranchesName = CombineNames( inCombineNames );
   outBranchesName.insert( outBranchesName.begin(), commonVarsName.begin(), commonVarsName.end() );
   transform( outBranchesName.begin(), outBranchesName.end(), outBranchesName.begin(), repStr );
 
@@ -98,7 +98,7 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
   copy( duplicateVarsName.begin(), duplicateVarsName.end(), back_inserter(allVarsName) );
 
   map<string,double> defaultVarValues;
-  defaultVarValues["weight"] = 0;
+  //  defaultVarValues["weight"] = 0;
   defaultVarValues["catCoup"]=-1;
   defaultVarValues["catXS"]=-1;
   defaultVarValues["catXSPhi"]=-1;
@@ -133,7 +133,7 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
     //Initialize the reading of the xAOD  
     xAOD::TEvent* tevent = new xAOD::TEvent(xAOD::TEvent::kClassAccess);
-    tevent->readFrom( inFile ).ignore();
+    if ( !tevent->readFrom( inFile ).isSuccess() ) throw runtime_error( "xAOD readFrom failed : " + string(inFile->GetName() ) );
 
    
     datasetWeight = mapDatasetWeights[process];
@@ -159,7 +159,7 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
       //Them pt of the Higgs must be recomputed with jet multiplicity
       string truthName = "HGamTruthEventInfo";
-      if ( !tevent->retrieve( mapEvent[truthName], truthName.c_str() ).isSuccess() ) { cout << "Can Not retrieve EventInfo" << endl; exit(1); }
+      if ( !tevent->retrieve( mapEvent[truthName], truthName.c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : " + truthName );
       double ptWeight=( mapEvent[truthName]->auxdata<int>( "N_j" ) < 2 && TString(vFileName).Contains("ggH") ) ? ReweightPtGgh( mapEvent[truthName]->auxdata<float>( "pT_yy" )/1e3 ): 1;
 
       map<string,double> valVarsConstCheck;
@@ -168,11 +168,10 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
 	const xAOD::EventInfo* currentEventInfo = mapEvent[vName];
 	string outBNamePrefix = branchMatching[vName];
-	//	vector<string> outBName = { "weight", "weightXS", "m_yy", "catCoup", "catXS", "pt_yy", "DPhi_yy", "catXSPhi" };
 	vector<string> vectPrefix( allVarsName.size(), outBNamePrefix+"_");
 	transform( vectPrefix.begin(), vectPrefix.end(), allVarsName.begin(), vectPrefix.begin(), std::plus<string>() );
 
-  	if ( !tevent->retrieve( currentEventInfo, vName.c_str() ).isSuccess() ){ cout << "Can Not retrieve EventInfo" << endl; exit(1); }
+  	if ( !tevent->retrieve( currentEventInfo, vName.c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : " + vName );
 	double commonWeight = ptWeight*lumiWeight/datasetWeight;
 
 	for ( unsigned int iVarName = 0; iVarName<allVarsName.size(); ++iVarName ) {
@@ -185,7 +184,9 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
       if ( keepEvent ) { 
   	outTree->Fill();
-  	totEntry++;
+	cout << "keepEvent : " << i_event << endl;
+	totEntry++;
+
       }
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
@@ -249,17 +250,18 @@ bool FillMapFromEventInfo( const string &outName,
 
   string varName = ExtractVariable( outName );  
   double currentVal = -99;
+ 
   //For general case, the variable does not give an information on the selection cut so in case of a OR return 0.
   //Only weight varaibles can eventually return true;
   bool keepEvent = 0;
   if ( varName == "weightXS" ) currentVal = static_cast<bool>(eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weight" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
   else if ( varName == "weight" ) currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
-  else if ( varName == "m_yy" ) currentVal = eventInfo->auxdata<float>( "m_yy" )/1e3;//in GeV
+  else if ( varName == "m_yy" ) currentVal = eventInfo->auxdata<float>( "m_yy" );
   else if ( varName == "catCoup" ) {
     currentVal = eventInfo->auxdata<int>( "catCoup_dev" );
     if ( currentVal == -1 ) currentVal = -99;
   }
-  else if ( varName == "pt_yy" ) currentVal = eventInfo->auxdata<float>( "pT_yy" )/1e3;//in GeV
+  else if ( varName == "pt_yy" ) currentVal = eventInfo->auxdata<float>( "pT_yy" );
   else if ( varName == "DPhi_yy" ) currentVal = eventInfo->auxdata<float>( "Dphi_y_y" );
   else if ( varName == "pt_yy" ) {
     currentVal = eventInfo->auxdata<float>( "pT_yy" )/1e3;//in GeV
@@ -277,37 +279,12 @@ bool FillMapFromEventInfo( const string &outName,
     currentVal = XSCat;
   }
   if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
-
+  if ( currentVal != -99 && ( varName == "m_yy" || varName == "pt_yy" ) ) currentVal /=1e3;//Switch energies to GeV
   if ( !isCommon && currentVal != -99 ) mapVal[outName] = currentVal;
+
   return keepEvent;
 }
 
-
-//######################################################
-// void UpdateDuplicateList( const string &branchPrefix, list<string> &duplicateListName, const map<string, double> &mapVal, map<string, double> &valVarsConstCheck, const unsigned int iEntry ) {
-//   for ( auto itVarName = duplicateListName.begin(); itVarName != duplicateListName.end(); ++itVarName) {
-//     string key = branchPrefix + "_" + *itVarName;
-//     map<string, double>::const_iterator itMapVal = mapVal.find( key );
-//     if ( itMapVal==mapVal.end() || itMapVal->second == -99 ) continue;
-
-
-//     map<string,double>::iterator itVarValsCheck = valVarsConstCheck.find(*itVarName);
-//     if ( itVarValsCheck != valVarsConstCheck.end() && itVarValsCheck->second != -99 && fabs((itVarValsCheck->second - itMapVal->second)/itVarValsCheck->second)>1e-7 ) {
-//       cout << "Removing variable : " << *itVarName << endl;
-//       cout << "Entry : " << iEntry << endl;
-//       cout << "branch : " << branchPrefix << endl;
-//       cout << "values : " << itVarValsCheck->second << " " << itMapVal->second << endl;
-//       itVarName = duplicateListName.erase(itVarName);
-//       --itVarName;
-//       for ( map<string,double>::const_iterator itTruc = mapVal.begin(); itTruc != mapVal.end(); ++itTruc ) {
-// 	if ( itTruc->first.find(itVarValsCheck->first) == string::npos ) continue;
-// 	cout << itTruc->first << " " << itTruc->second << endl;
-//       }
-//     }
-//     else if ( itVarValsCheck != valVarsConstCheck.end() && itVarValsCheck->second == -99 ) continue;
-//     else valVarsConstCheck[*itVarName] = itMapVal->second;
-//   }
-// }
 
 //######################################################
 void UpdateDuplicateList( list<string> &duplicateListName,  const map<string, double> &mapVal, const map<string,double> &defaultValues ) {
@@ -352,6 +329,7 @@ void TotalSumWeights( const vector<string> &rootFilesName, map<string,double> &d
       datasetWeights[*vProc]+=hist->GetBinContent(3);
       break;
     }
+    delete dumInFile;
   }
 }
 

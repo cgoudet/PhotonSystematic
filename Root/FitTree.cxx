@@ -38,8 +38,6 @@ using std::ifstream;
 
 int FitTree( string inConfFileName ) {
 
-  cout << "FitTree : " << inConfFileName << endl;  
-  //int FitTree( vector<string> &inFileNames, vector<string> &branches, string outFileName, int doXS, int testID ) {
   string outFileName, analysis, fitMethod;
   vector<string> rootFilesName, categoriesName, NPName;
   unsigned int nBins;
@@ -59,20 +57,23 @@ int FitTree( string inConfFileName ) {
   po::store(po::parse_config_file(ifs, configOptions), vm);
   po::notify( vm );
 
-  if ( !rootFilesName.size() ) { cout << "FitTree : No input files provided in " << inConfFileName << endl; exit(0); }
+  if ( !rootFilesName.size() ) throw invalid_argument( "FitTree : No input files provided in " + inConfFileName );
+  if ( outFileName == "" ) throw invalid_argument( "FitTree : No outFileName provided in " + inConfFileName );
 
-  if ( outFileName == "" ) { cout << "FiTree : No outFileName provided in " << inConfFileName << endl; exit(0); }
+  const vector<string>  allowedAnalyses = {"Couplings", "DiffXS", "DiffXSPhi" };
+  if ( find( allowedAnalyses.begin(), allowedAnalyses.end(), analysis ) != allowedAnalyses.end() ) throw invalid_argument( "FitTree : Wrong analysis provided : " + analysis );
+
+  const vector<string> allowedFitMethods = { "fitAll_fitPOI", "fitAll_fitExtPOI" };
+  if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) != allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
+
+  if ( !NPName.size() ) cout << "FitTree : No branches name provided. Will read all branches" << endl;
+
+  //Create a directory at the target to hold all results.
   outFileName = StripString( outFileName, 0, 1 );
   system( ("mkdir " + outFileName).c_str() );
   if ( outFileName.back() != '/' ) outFileName+="/";
 
-  if ( !NPName.size() ) { cout << "FitTree : No branches name profided." << endl; exit(0); }
 
-  vector<string>  allowedAnalyses = {"Couplings", "DiffXS", "DiffXSPhi" };
-  if ( SearchVectorBin( analysis, allowedAnalyses ) == allowedAnalyses.size() ) { cout << "Wrong analysis provided : " << analysis << endl << "Choose between : "; PrintVector( allowedAnalyses ); exit(0); }
-
-  vector<string> allowedFitMethods = { "fitAll_fitPOI", "fitAll_fitExtPOI" };
-  if ( SearchVectorBin( fitMethod, allowedFitMethods ) == allowedFitMethods.size()  ) { cout << "Wrong fitMethod provided : " << fitMethod << endl << "Choose between : "; PrintVector( allowedFitMethods ); exit(0); }
   fstream stream;
   // vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
   // map<string, TH1D*> mapHistAsym;
@@ -84,42 +85,32 @@ int FitTree( string inConfFileName ) {
   multi_array<double, 3>  mArrayMean; //hold the exact mean and rms of the weighted dataset
   mArrayMean.resize( extents[3][categoriesName.size()][NPName.size()] );
 
-  //Store the starting values of the DSCB variables
-  vector<string> CBVarName = { "m_yy", "mean", "alphaHi", "nHi", "alphaLow", "nLow", "sigma", "weight" };
+  //Store the starting values of the DSCB variables for convergence of first Fit
+  const vector<string> CBVarName = { "m_yy", "mean", "alphaHi", "nHi", "alphaLow", "nLow", "sigma", "weight" };
   map<string, vector<double>> mapInitValues;
-  mapInitValues["weight"]={ 1, 0, 1e3 };
-  mapInitValues["mean"]={ 125, 124, 126 };
-  mapInitValues["m_yy"]= { 126, 105, 160 };
-  mapInitValues["sigma"]={1.5, 1, 3 };
-  mapInitValues["alphaHi"]= {1.6, 0, 5 };
-  mapInitValues["alphaLow"]={1.3, 0, 5};
-  mapInitValues["nLow"]={9, 0, 100};
-  mapInitValues["nHi"]={5, 0, 100};
+  FillInitialValuesFitParam( mapInitValues );
 
   map<string, RooRealVar*> mapCBParameters;
-  for ( auto vVarNames : CBVarName ) {
-    mapCBParameters[vVarNames] = new RooRealVar( vVarNames.c_str(), vVarNames.c_str(), mapInitValues[vVarNames][0], mapInitValues[vVarNames][1], mapInitValues[vVarNames][2] );
-    mapCBParameters[vVarNames]->setConstant( 0 );
-    // if ( vVarNames == "nHi" || vVarNames=="nLow" ) mapCBParameters[vVarNames]->setConstant( 1 );
-    // mapCBParameters[vVarNames]->Print();
+  for ( auto it = CBVarName.begin(); it!=CBVarName.end(); ++it ) {
+    map<string,vector<double>>::iterator itPos = mapInitValues.find(*it);
+    mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), itPos->second[0], itPos->second[1], itPos->second[2] );
+    mapCBParameters[*it]->setConstant( 0 );
   }
   mapCBParameters["m_yy"]->setBins(nBins);
+
   RooArgSet *setObservables = new RooArgSet( *mapCBParameters["m_yy"], *mapCBParameters["weight"] );
 
   vector<string> observablesName = { "m_yy", "weight" };
   map<string, vector<RooDataSet*>> mapSet;
 
-
-  
   MapBranches mapBranch;//Is used to easily link TTRee branches to a map
 
   for ( auto vFileName : rootFilesName ) {
     cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
-    if ( !inFile ) { cout << vFileName << " does not exist. " << endl; exit(0); }
+    if ( !inFile ) throw invalid_argument( "FitTree : input file does not exist : " + vFileName );
 
-    TTree *inTree = (TTree*) inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() );
-    if ( !inTree ) { cout << "No default TTree found in " << inFile->GetName() << endl; exit(0); }
+    TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
 
     mapBranch.LinkTreeBranches( inTree );
     map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
@@ -494,4 +485,128 @@ int FitTree( string inConfFileName ) {
   stream.close();
   cout << "Went up to the end" << endl;  
   return 0;
+}
+
+//=================================================
+void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
+  mapInitValues.clear();
+  mapInitValues["weight"]={ 1, 0, 1e3 };
+  mapInitValues["mean"]={ 125, 124, 126 };
+  mapInitValues["m_yy"]= { 126, 105, 160 };
+  mapInitValues["sigma"]={1.5, 1, 3 };
+  mapInitValues["alphaHi"]= {1.6, 0, 5 };
+  mapInitValues["alphaLow"]={1.3, 0, 5};
+  mapInitValues["nLow"]={9, 0, 100};
+  mapInitValues["nHi"]={5, 0, 100};
+}
+
+//=================================================
+void FillDataset( const vector<string> &rootFilesName,
+		  const list<string> &NPName,
+		  string &outName,
+		  const string &analysis
+		  ) {
+  if ( !rootFilesName.size() ) throw invalid_argument( "FillDataset : No input files provided." );
+  if ( outName == "" ) throw invalid_argument( "FillDataset : No outName provided." );
+
+  const vector<string>  allowedAnalyses = {"Couplings", "DiffXS", "DiffXSPhi" };
+  if ( find( allowedAnalyses.begin(), allowedAnalyses.end(), analysis ) != allowedAnalyses.end() ) throw invalid_argument( "FillDataset : Wrong analysis provided : " + analysis );
+
+  if ( !NPName.size() ) cout << "FillDataset : No branches name provided. Will read all branches" << endl;
+
+  //Create a directory at the target to hold all results.
+  outName = StripString( outName, 0, 1 );
+  system( ("mkdir " + outName).c_str() );
+  if ( outName.back() != '/' ) outName+="/";
+
+
+  // fstream stream;
+  // // vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
+  // // map<string, TH1D*> mapHistAsym;
+  // // for ( auto vProc : processes ) mapHistAsym[vProc] = new TH1D( "histAsym", "histAsym", 100, -1, 1 );
+  // // if ( doXS == 0 ) categoriesNames = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
+  // // else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
+  // // else if ( doXS == 2 ) categoriesNames = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
+
+  // multi_array<double, 3>  mArrayMean; //hold the exact mean and rms of the weighted dataset
+  // mArrayMean.resize( extents[3][categoriesName.size()][NPName.size()] );
+
+  string weightName = "weight";
+  if ( analysis == "DiffXS" ) weightName = "weightXS";
+  else if ( analysis == "DiffXSPhi" ) weightName = "weightXSPhi";
+
+  const vector<string> CBVarName = { "m_yy", weightName };  
+  map<string, RooRealVar> mapCBParameters;
+  RooArgSet observables;
+  for ( auto it = CBVarName.begin(); it!=CBVarName.end(); ++it ) {
+    mapCBParameters[*it] = RooRealVar( it->c_str(), it->c_str(), 0 );
+    observables.add( mapCBParameters[*it] );
+  }
+  //  mapCBParameters["m_yy"].setBins(nBins);
+  list<list<string>> forInCombine( 2, list<string>() );
+  copy( NPName.begin(), NPName.end(), back_inserter(*forInCombine.begin()) );
+  copy( CBVarName.begin(), CBVarName.end(), back_inserter(*(++forInCombine.begin() )));
+
+  map<string, vector<RooDataSet>> mapSet;
+  MapBranches mapBranch;//Is used to easily link TTRee branches to a map
+
+  for ( auto vFileName : rootFilesName ) {
+    cout << vFileName << endl;
+    TFile *inFile =  new TFile( vFileName.c_str() );
+    if ( !inFile ) throw invalid_argument( "FitTree : input file does not exist : " + vFileName );
+
+    TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
+
+    mapBranch.LinkTreeBranches( inTree );
+    //    map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
+
+    unsigned int nentries = inTree->GetEntries();
+    cout << "Entries : " << nentries << endl;
+    for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
+      inTree->GetEntry( iEntry );
+
+      // unsigned int iBranch = 0;
+      // for ( auto vBranch : NPName ) {
+      // 	for ( auto vVar : observablesName ) {
+      // 	  string varName = vBranch + "_" + vVar;
+      // 	  mapCBParameters[vVar]->setVal( mapValuesEntry[varName] );
+      // 	}
+      // 	if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"]->setVal( mapValuesEntry[vBranch+"_weightXS"] );
+      
+      // 	//Choose the branch in which to read the category
+      // 	int category = 0;
+      // 	if ( analysis == "Couplings"  ) category = mapBranch.GetVal( vBranch+"_cat" );
+      // 	else if ( analysis == "DiffXS" ) category = mapBranch.GetVal( vBranch+"_catXS" );
+      // 	else if ( analysis == "DiffXSPhi" ) category = mapBranch.GetVal( vBranch+"_catXSPhi" );
+
+      // 	while ( mapSet[vBranch].size() < (unsigned int) category+1 ) mapSet[vBranch].push_back(0);
+
+      // 	if ( !mapSet[vBranch][0] ) {
+      // 	  string title = vBranch+"_incl";
+      // 	  mapSet[vBranch][0] = new RooDataSet( title.c_str(), title.c_str(), *setObservables, mapCBParameters["weight"]->GetName() );
+      // 	}
+      // 	if ( !mapSet[vBranch][category] ) {
+      // 	  TString title = TString::Format( "%s_cat%d", vBranch.c_str(), category );
+      // 	  mapSet[vBranch][category] = new RooDataSet( title, title, *setObservables,  mapCBParameters["weight"]->GetName() );
+      // 	}
+
+
+      // 	double value = mapCBParameters["m_yy"]->getVal()*mapCBParameters["weight"]->getVal();
+      // 	for ( int i = 0; i<category+1; i+=category ) {
+      // 	  mArrayMean[0][i][iBranch]+=value;
+      // 	  mArrayMean[1][i][iBranch]+=value*value;
+      // 	  mArrayMean[2][i][iBranch]+=mapCBParameters["weight"]->getVal();
+      // 	  mapSet[vBranch][i]->add( *setObservables, mapCBParameters["weight"]->getVal() );
+      // 	}
+
+
+      // 	++iBranch;
+
+      // }//end vBranch
+    }//end iEntry
+    
+    delete inTree;
+    delete inFile;
+  }//end vFileName
+
 }
