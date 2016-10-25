@@ -1,28 +1,33 @@
+#include "PlotFunctions/AtlasStyle.h"
+#include "PlotFunctions/AtlasLabels.h"
+#include "PlotFunctions/AtlasUtils.h"
 #include "PhotonSystematic/FitTree.h"
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <map>
-#include <boost/program_options.hpp>
+#include "PlotFunctions/MapBranches.h"
+#include "PlotFunctions/RobustMinimize.h"
+#include "PlotFunctions/SideFunctionsTpp.h"
+
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "TH1D.h"
-#include <boost/multi_array.hpp>
 #include "RooArgSet.h"
-#include "PlotFunctions/MapBranches.h"
-#include "PlotFunctions/RobustMinimize.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TCanvas.h"
-#include "PlotFunctions/SideFunctions.h"
 #include "RooPlot.h"
 #include "HGamTools/HggTwoSidedCBPdf.h"
 #include "RooDataHist.h"
 #include "TString.h"
-#include "PlotFunctions/AtlasStyle.h"
-#include "PlotFunctions/AtlasLabels.h"
-#include "PlotFunctions/AtlasUtils.h"
 
+#include <boost/program_options.hpp>
+#include <boost/multi_array.hpp>
+namespace po = boost::program_options;
+using boost::multi_array;
+using boost::extents;
+
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <map>
 using std::cout;
 using std::endl;
 using std::vector;
@@ -30,9 +35,6 @@ using std::string;
 using std::fstream;
 using std::map;
 using std::ifstream;
-namespace po = boost::program_options;
-using boost::multi_array;
-using boost::extents;
 
 int FitTree( string inConfFileName ) {
 

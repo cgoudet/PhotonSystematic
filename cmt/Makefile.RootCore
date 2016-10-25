@@ -16,10 +16,10 @@ PACKAGE_PRELOAD      =
 PACKAGE_CXXFLAGS     = 
 
 # additional compilation flags to pass (propagated to dependent packages):
-PACKAGE_OBJFLAGS     = 
+PACKAGE_OBJFLAGS     = -pg
 
 # additional linker flags to pass (for compiling the library):
-PACKAGE_LDFLAGS      = -lboost_program_options
+PACKAGE_LDFLAGS      = -lboost_program_options 
 #-lboost_unit_test_framework
 
 # additional linker flags to pass (for compiling binaries):
