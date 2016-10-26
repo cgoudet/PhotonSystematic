@@ -62,7 +62,9 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
   //=============================================
   if ( !xAOD::Init().isSuccess() ) throw runtime_error( "xAOD Init Failed" );
 
-  if ( outDirectory.back() != '/' ) outDirectory+="/";
+  bool isOutputDirectory = ( outDirectory.substr(outDirectory.find_last_of( "." )) == ".root" );
+  if ( !isOutputDirectory && outDirectory.back() != '/' ) outDirectory+="/";
+
   ReplaceString repStr("HGamEventInfo_");
   /*Create the names of all the required branches
     For the input variables one must combine the name of the container with the name of the variables of interest
@@ -71,10 +73,10 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
   const list<string> varsName = GetAnalysisVariables();
 
-
   //Stores the prefix output for a given container
   map<string,string> branchMatching;
-  for ( auto vName : containersName ) branchMatching[vName] = repStr(vName);
+  for ( auto itName = containersName.begin(); itName!=containersName.end(); ++itName ) 
+    branchMatching[*itName] = repStr(*itName);
 
   list<list<string>> inCombineNames( 1, list<string>() );
   copy( containersName.begin(), containersName.end(), back_inserter( *inCombineNames.begin() ) );
@@ -98,13 +100,12 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
   copy( duplicateVarsName.begin(), duplicateVarsName.end(), back_inserter(allVarsName) );
 
   map<string,double> defaultVarValues;
-  //  defaultVarValues["weight"] = 0;
   defaultVarValues["catCoup"]=-1;
   defaultVarValues["catXS"]=-1;
   defaultVarValues["catXSPhi"]=-1;
 
   map<string, double> mapVal;
-  const list<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
+  const list<string> processes = GetAnalysisProcesses();
 
   double lumiWeight=1e4;//Normalize total events to 10fb-1
   //  lumiWeight=1e3;
@@ -118,18 +119,15 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
   int nFile=0;
   TTree *outTree = 0;
   map<string, const xAOD::EventInfo* > mapEvent;
-  for ( auto vName : containersName ) mapEvent[vName] = 0;
   double datasetWeight = 1;
 
-  for ( auto vFileName : rootFilesName ) {
-    cout << vFileName << endl;
+  for ( vector<string>::const_iterator itFileName = rootFilesName.begin(); itFileName != rootFilesName.end(); ++itFileName ) {
+    cout << *itFileName << endl;
 
     //Check the process to which this MC contributes. The process should be in the name
-    string process;
-    for ( auto vProc : processes ) if ( vFileName.find( vProc ) != string::npos )  { process = vProc; break; }
-    if ( process == "" ) { cout << vFileName << " was not found in map." << endl;  exit(0); }
+    string process = FindProcessName( *itFileName );
 
-    TFile *inFile = new TFile( vFileName.c_str() );
+    TFile *inFile = new TFile( itFileName->c_str() );
 
     //Initialize the reading of the xAOD  
     xAOD::TEvent* tevent = new xAOD::TEvent(xAOD::TEvent::kClassAccess);
@@ -138,7 +136,7 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
    
     datasetWeight = mapDatasetWeights[process];
     //A bug have been found in the cross section tHjb. 
-    if ( process == "tHjb" && TString(vFileName).Contains("h013") ) {
+    if ( process == "tHjb" && itFileName->find("h013") != string::npos ) {
       datasetWeight/=10.;
       cout << "correcting tHjb" << endl;
     }
@@ -151,7 +149,10 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
       if ( !outTree ) {
   	outTree = new TTree( "outTree", "outTree" );
   	outTree->SetDirectory(0);
-  	for ( auto vVar : outBranchesName ) outTree->Branch(vVar.c_str(), &mapVal[vVar] );
+  	for ( auto itVarName = outBranchesName.begin(); itVarName!=outBranchesName.end(); ++itVarName ) {
+	  cout << "branchName : " << *itVarName << endl;
+	  outTree->Branch(itVarName->c_str(), &mapVal[*itVarName] );
+	}
       }
 
       if ( totEntry % 100000 == 0 )  cout << "totEntry : " << totEntry << endl;
@@ -160,29 +161,36 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
       //Them pt of the Higgs must be recomputed with jet multiplicity
       string truthName = "HGamTruthEventInfo";
       if ( !tevent->retrieve( mapEvent[truthName], truthName.c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : " + truthName );
-      double ptWeight=( mapEvent[truthName]->auxdata<int>( "N_j" ) < 2 && TString(vFileName).Contains("ggH") ) ? ReweightPtGgh( mapEvent[truthName]->auxdata<float>( "pT_yy" )/1e3 ): 1;
+      double ptWeight=( mapEvent[truthName]->auxdata<int>( "N_j" ) < 2 && itFileName->find("ggH")!=string::npos ) ? ReweightPtGgh( mapEvent[truthName]->auxdata<float>( "pT_yy" )/1e3 ): 1;
 
       map<string,double> valVarsConstCheck;
       bool keepEvent = false;
-      for ( auto vName : containersName ) {
+      for ( auto itName = containersName.begin(); itName != containersName.end(); ++itName ) {
 
-	const xAOD::EventInfo* currentEventInfo = mapEvent[vName];
-	string outBNamePrefix = branchMatching[vName];
-	vector<string> vectPrefix( allVarsName.size(), outBNamePrefix+"_");
-	transform( vectPrefix.begin(), vectPrefix.end(), allVarsName.begin(), vectPrefix.begin(), std::plus<string>() );
+	const xAOD::EventInfo* currentEventInfo = mapEvent[*itName];
 
-  	if ( !tevent->retrieve( currentEventInfo, vName.c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : " + vName );
+  	if ( !tevent->retrieve( currentEventInfo, itName->c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : " + *itName );
 	double commonWeight = ptWeight*lumiWeight/datasetWeight;
 
-	for ( unsigned int iVarName = 0; iVarName<allVarsName.size(); ++iVarName ) {
-	    bool isCommon = find( commonVarsName.begin(), commonVarsName.end(), allVarsName[iVarName] ) != commonVarsName.end();
-	    keepEvent = keepEvent || FillMapFromEventInfo( vectPrefix[iVarName], mapVal, currentEventInfo, commonWeight, isCommon );
-	  }
+	list<string> outName;
+	
+	if ( *itName == repStr( *itName ) ) copy( allVarsName.begin(), allVarsName.end(), back_inserter(outName) );
+	else {
+	  Prefix outPrefix( repStr( *itName )+"_" );
+	  transform( allVarsName.begin(), allVarsName.end(), back_inserter(outName), outPrefix );
+	}
+
+	for ( auto itBranch = outName.begin(); itBranch!=outName.end(); ++itBranch ) {
+	  cout << "itName : " << *itBranch << endl;
+	  bool isCommon = find( commonVarsName.begin(), commonVarsName.end(), ExtractVariable(*itBranch) ) != commonVarsName.end();
+	  keepEvent = keepEvent || FillMapFromEventInfo( *itBranch, mapVal, currentEventInfo, commonWeight, isCommon );
+	}
 		
       }//end vName
 
 
       if ( keepEvent ) { 
+	for ( auto it = mapVal.begin(); it!=mapVal.end(); ++it ) cout <<it->first<<" "<<it->second<<endl;
   	outTree->Fill();
 	cout << "keepEvent : " << i_event << endl;
 	totEntry++;
@@ -191,8 +199,8 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
       
-      if ( ( totEntry%500000==0 && outTree->GetEntries() ) || ( vFileName == rootFilesName.back() && i_event==nentries-1 ) ) {
-  	string dumName = outDirectory + StripString(vFileName, 1, 0);
+      if ( ( totEntry%500000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
+  	string dumName = isOutputDirectory ? outDirectory : outDirectory + StripString(*itFileName, 1, 0);
   	cout << "saving : " << dumName << endl;
   	cout << "entries : " << outTree->GetEntries() << endl;
   	TFile *dumFile = new TFile( dumName.c_str(), "recreate" );
@@ -280,7 +288,11 @@ bool FillMapFromEventInfo( const string &outName,
   }
   if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
   if ( currentVal != -99 && ( varName == "m_yy" || varName == "pt_yy" ) ) currentVal /=1e3;//Switch energies to GeV
-  if ( !isCommon && currentVal != -99 ) mapVal[outName] = currentVal;
+  cout << varName << " " << isCommon << " " << currentVal << endl;
+  if ( !isCommon && currentVal != -99 ) {
+    mapVal[outName] = currentVal;
+    cout << outName << " " << mapVal[outName] << endl;
+  }
 
   return keepEvent;
 }
@@ -344,3 +356,17 @@ string ExtractVariable( const string &inName ) {
   }
   return varName;
 }
+
+//#######################################################
+string FindProcessName( const string &inFileName ) {
+  list<string> foundProcesses;
+  list<string> processes = GetAnalysisProcesses();
+  for ( auto it = processes.begin(); it != processes.end(); ++it )
+    if ( inFileName.find( *it ) != string::npos ) foundProcesses.push_back( *it );
+
+  if ( foundProcesses.empty() ) throw runtime_error( "FindProcessInName : No process found in " + inFileName );
+  if ( ++foundProcesses.begin() != foundProcesses.end() ) throw runtime_error( "FindProcessInName : Too many processes found in " + inFileName );
+  return *foundProcesses.begin();
+}
+
+//######################################################

@@ -119,5 +119,24 @@ BOOST_AUTO_TEST_CASE(GetAnalysisVariablesTest) {
   BOOST_CHECK( GetAnalysisVariables() == analVar );
 }
 
+BOOST_AUTO_TEST_CASE(FindProcessNameTest) {
+  string inFileName = "dumAbbH125_ybyttyui";
+  BOOST_CHECK( FindProcessName( inFileName ) == "bbH125_ybyt" );
+  inFileName == "dumA_bbH125_ybyt_tyui";
+  BOOST_CHECK( FindProcessName( inFileName ) == "bbH125_ybyt" );
+  inFileName = "";
+  BOOST_CHECK_THROW( FindProcessName( inFileName ), runtime_error );
+  inFileName = "zertgjhklm";
+  BOOST_CHECK_THROW( FindProcessName( inFileName ), runtime_error );
+  inFileName = "ggHbbH125_ybyt";
+  BOOST_CHECK_THROW( FindProcessName( inFileName ), runtime_error );
+}
+
+BOOST_AUTO_TEST_CASE(ReadMxAODTest) {
+  string inConfFile = "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestReadMxAOD.boost";
+  ReadMxAOD( inConfFile, 2 );
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
