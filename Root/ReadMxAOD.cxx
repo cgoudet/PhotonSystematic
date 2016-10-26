@@ -263,8 +263,8 @@ bool FillMapFromEventInfo( const string &outName,
   bool keepEvent = 0;
   if ( varName == "weightXS" ) currentVal = static_cast<bool>(eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weight" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
   else if ( varName == "weight" ) {
-    cout << "justWeight : " << eventInfo->auxdata< char >( "isPassed" ) << " "<< static_cast<int>( eventInfo->auxdata< char >( "isPassed" )) <<  " " << eventInfo->auxdata<float>( "weightCatCoup_dev" ) << " " << eventInfo->auxdata<float>( "crossSectionBRfilterEff" ) << " " << commonWeight << endl;
-      currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
+    //    cout << "justWeight : " << eventInfo->auxdata< char >( "isPassed" ) << " "<< static_cast<int>( eventInfo->auxdata< char >( "isPassed" )) <<  " " << eventInfo->auxdata<float>( "weightCatCoup_dev" ) << " " << eventInfo->auxdata<float>( "crossSectionBRfilterEff" ) << " " << commonWeight << endl;
+    currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
 }
   else if ( varName == "m_yy" ) currentVal = eventInfo->auxdata<float>( "m_yy" );
   else if ( varName == "catCoup" ) {
@@ -278,14 +278,16 @@ bool FillMapFromEventInfo( const string &outName,
     const vector<double> XSCatPt = GetPtCategXS();
     unsigned int ptCat = 0;
     while ( XSCatPt[ptCat]<currentVal ) ++ptCat;
-    currentVal = ptCat;
+    if ( ptCat ) currentVal = ptCat;
+    else currentVal = -99;
   }
   else if ( varName == "catXSPhi" ) {
     currentVal = eventInfo->auxdata<float>( "Dphi_y_y" );
     const vector<double> XSCatPhi = GetPhiCategXS();
     unsigned int XSCat=0;
     while ( currentVal> XSCatPhi[XSCat] ) ++XSCat; 
-    currentVal = XSCat;
+    if ( XSCat ) currentVal = XSCat;
+    else currentVal=-99;
   }
 
 if ( currentVal != -99 && ( varName == "m_yy" || varName == "pt_yy" ) ) currentVal /=1e3;//Switch energies to GeV
@@ -295,7 +297,7 @@ if ( !(isCommon && currentVal == -99) ) mapVal[outName] = currentVal;
 
 
      if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
-     if ( varName.find("weight")!=string::npos )  cout << outName << " " << isCommon << " " << currentVal << endl;
+//     if ( varName.find("weight")!=string::npos )  cout << outName << " " << isCommon << " " << currentVal << endl;
   return keepEvent;
 }
 

@@ -519,30 +519,19 @@ void FillDataset( const vector<string> &rootFilesName,
   system( ("mkdir " + outName).c_str() );
   if ( outName.back() != '/' ) outName+="/";
 
+  // string weightName = "weight";
+  // if ( analysis == "DiffXS" ) weightName = "weightXS";
+  // else if ( analysis == "DiffXSPhi" ) weightName = "weightXSPhi";
 
-  // fstream stream;
-  // // vector<string> processes = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
-  // // map<string, TH1D*> mapHistAsym;
-  // // for ( auto vProc : processes ) mapHistAsym[vProc] = new TH1D( "histAsym", "histAsym", 100, -1, 1 );
-  // // if ( doXS == 0 ) categoriesNames = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
-  // // else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
-  // // else if ( doXS == 2 ) categoriesNames = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
-
-  // multi_array<double, 3>  mArrayMean; //hold the exact mean and rms of the weighted dataset
-  // mArrayMean.resize( extents[3][categoriesName.size()][NPName.size()] );
-
-  string weightName = "weight";
-  if ( analysis == "DiffXS" ) weightName = "weightXS";
-  else if ( analysis == "DiffXSPhi" ) weightName = "weightXSPhi";
-
-  const vector<string> CBVarName = { "m_yy", weightName };  
+  //Create roofit parameters to fill datasets
+  const vector<string> CBVarName = { "m_yy", "weight" };  
   map<string, RooRealVar> mapCBParameters;
   RooArgSet observables;
   for ( auto it = CBVarName.begin(); it!=CBVarName.end(); ++it ) {
     mapCBParameters[*it] = RooRealVar( it->c_str(), it->c_str(), 0 );
     observables.add( mapCBParameters[*it] );
   }
-  //  mapCBParameters["m_yy"].setBins(nBins);
+
   list<list<string>> forInCombine( 2, list<string>() );
   copy( NPName.begin(), NPName.end(), back_inserter(*forInCombine.begin()) );
   copy( CBVarName.begin(), CBVarName.end(), back_inserter(*(++forInCombine.begin() )));
@@ -558,26 +547,26 @@ void FillDataset( const vector<string> &rootFilesName,
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
 
     mapBranch.LinkTreeBranches( inTree );
-    //    map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
+    const map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
 
     unsigned int nentries = inTree->GetEntries();
     cout << "Entries : " << nentries << endl;
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
 
-      unsigned int iBranch = 0;
-      for ( auto vBranch : NPName ) {
-      	// for ( auto vVar : observablesName ) {
-      	//   string varName = vBranch + "_" + vVar;
-      	//   mapCBParameters[vVar]->setVal( mapValuesEntry[varName] );
-      	// }
-      	// if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"]->setVal( mapValuesEntry[vBranch+"_weightXS"] );
+      // unsigned int iBranch = 0;
+      // for ( auto itBranch = NPName.begin(); itBranch!=NPName.end(); ++itBranch ) {
+      // 	for ( auto itObsName = observablesName.begin(); itObsName!=observablesName.begin(); ++itObsName ) {
+      // 	  string varName = vBranch + "_" + vVar;
+      // 	  mapCBParameters[vVar]->setVal( mapValuesEntry[varName] );
+      // 	}
+      // 	if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"].setVal( mapValuesEntry[vBranch+"_weightXS"] );
       
-      	// //Choose the branch in which to read the category
-      	// int category = 0;
-      	// if ( analysis == "Couplings"  ) category = mapBranch.GetVal( vBranch+"_cat" );
-      	// else if ( analysis == "DiffXS" ) category = mapBranch.GetVal( vBranch+"_catXS" );
-      	// else if ( analysis == "DiffXSPhi" ) category = mapBranch.GetVal( vBranch+"_catXSPhi" );
+      // 	//Choose the branch in which to read the category
+      // 	int category = 0;
+      // 	if ( analysis == "Couplings"  ) category = mapBranch.GetVal( vBranch+"_cat" );
+      // 	else if ( analysis == "DiffXS" ) category = mapBranch.GetVal( vBranch+"_catXS" );
+      // 	else if ( analysis == "DiffXSPhi" ) category = mapBranch.GetVal( vBranch+"_catXSPhi" );
 
       	// while ( mapSet[vBranch].size() < (unsigned int) category+1 ) mapSet[vBranch].push_back(0);
 
@@ -600,9 +589,9 @@ void FillDataset( const vector<string> &rootFilesName,
       	// }
 
 
-      	++iBranch;
+      // 	++iBranch;
 
-      }//end vBranch
+      // }//end vBranch
     }//end iEntry
     
     delete inTree;
@@ -613,4 +602,56 @@ void FillDataset( const vector<string> &rootFilesName,
 
 //==========================================
 string RemoveVar( const string &inName ) {
+  size_t separatorPos = inName.find_last_of( "_" );
+  string branchName = inName.substr( 0, separatorPos );
+  string varName = inName.substr( separatorPos+1 );
+  if ( varName == "yy" ) branchName = branchName.substr( 0, branchName.find_last_of( "_" ) );
+  return varName;
+}
+
+//=============================================
+void FillEntryDataset( const list<string> &NPName, 
+		       //		       const list<string> &observables, 
+		       const MapBranches &mapBranch, 
+		       map<string,vector<RooDataSet*>> &mapSet,
+		       map<string,RooRealVar> &observables,
+		       const string &catVar ) {
+
+  RooRealVar *weightVar = 0;
+  RooArgSet setObservables;		 
+  for ( auto itNPName = NPName.begin(); itNPName!=NPName.end(); ++itNPName ) {
+
+    string branchPrefix = ( *itNPName!="" ? *itNPName + "_"  : "" );
+    string catBranchName = branchPrefix+catVar;
+    int category = static_cast<int>( mapBranch.GetVal( catBranchName ) );    
+    if ( category == -99 ) continue;
+    
+    vector<RooDataSet*>  &vectDatasets = mapSet.find( *itNPName )->second;
+    
+    for ( auto itObs = observables.begin(); itObs!=observables.end(); ++itObs ) {
+      //      map<string,RooRealVar>::iterator posObservable = mapCBParameters.find( *itObs );
+      //      if ( posObservable == mapCBParameters.end() ) throw runtime_error( "FillEntryDataset : observable " + *itObs + " has not been defined." );
+      string branchName = branchPrefix+string(itObs->second.GetTitle() );
+      itObs->second.setVal( mapBranch.GetVal(branchName) );
+      setObservables.add( itObs->second );
+      if ( string(itObs->second.GetName() ) ==  "weight" ) weightVar = &itObs->second;
+    }// end itObs
+
+    if ( weightVar->getVal() == 0 ) continue;
+
+    while ( vectDatasets.size() < static_cast<unsigned int>(category+1) ) vectDatasets.push_back(0);
+
+    if ( !vectDatasets[0] ) {
+      string title = *itNPName+"_incl";
+      vectDatasets[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
+    }
+    if ( !vectDatasets[category] ) {
+      TString title = TString::Format( "%s_cat%d", itNPName->c_str(), category );
+      vectDatasets[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
+    }
+
+    for ( int i = 0; i<category+1; i+=category ) vectDatasets[i]->add( setObservables, weightVar->getVal() );
+
+  }
+
 }

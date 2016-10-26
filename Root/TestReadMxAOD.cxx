@@ -102,17 +102,19 @@ BOOST_AUTO_TEST_CASE(MxAODTest) {
   testWeights.clear();
   testWeights["HGamEventInfo_weightXS"]=0;
   testWeights["HGamEventInfo_weight"]=0;
-  //Code does not create a case for default value
-  // testWeights["HGamEventInfo_m_yy"]=-99;
-  // testWeights["HGamEventInfo_pt_yy"]=-99;
-  // testWeights["HGamEventInfo_DPhi_yy"]=-99;
-  // testWeights["HGamEventInfo_catXSPhi"]=-99;
-  // testWeights["HGamEventInfo_catXS"]=-99;
-  // testWeights["HGamEventInfo_catCoup"]=-99;
+  testWeights["HGamEventInfo_m_yy"]=-99;
+  testWeights["HGamEventInfo_pt_yy"]=-99;
+  testWeights["HGamEventInfo_DPhi_yy"]=-99;
+  testWeights["HGamEventInfo_catXSPhi"]=-99;
+  testWeights["HGamEventInfo_catXS"]=-99;
+  testWeights["HGamEventInfo_catCoup"]=-99;
+
+  for ( auto vMap : weights ) cout << vMap.first << " " << vMap.second << endl;
+  for ( auto vMap : testWeights ) cout << vMap.first << " " << vMap.second << endl;
 
   BOOST_CHECK_EQUAL( keepEvent, 0 );
-  BOOST_CHECK_EQUAL( testWeights.size(), weights.size() );
-  BOOST_CHECK( testWeights == weights );
+  BOOST_REQUIRE_EQUAL( testWeights.size(), weights.size() );
+  BOOST_REQUIRE( testWeights == weights );
   testFile.Close();
 }
 
@@ -136,7 +138,7 @@ BOOST_AUTO_TEST_CASE(FindProcessNameTest) {
 
 BOOST_AUTO_TEST_CASE(ReadMxAODTest) {
   string inConfFile = "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestReadMxAOD.boost";
-  ReadMxAOD( inConfFile, 2 );
+  ReadMxAOD( inConfFile, 1 );
 
   TFile file( "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestOutReadMxAOD.root" );
   TTree *outTree = static_cast<TTree*>(file.Get("outTree"));
@@ -146,6 +148,8 @@ BOOST_AUTO_TEST_CASE(ReadMxAODTest) {
 
   outTree->GetEntry(1);
   mapBranch.Print();
+
+
 }
 
 

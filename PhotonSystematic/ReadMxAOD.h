@@ -82,7 +82,7 @@ inline const std::vector<double>& GetPtCategXS() {
 
 inline const std::vector<double>& GetPhiCategXS() {
   double pi = 3.14159;
-  static const std::vector<double> XSCatPhi = {-100, 0, pi/3., 2*pi/3, 5*pi/6, pi };
+  static const std::vector<double> XSCatPhi = {0., pi/3., 2*pi/3, 5*pi/6, pi };
   return XSCatPhi;
 }
 
