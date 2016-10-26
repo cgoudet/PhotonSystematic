@@ -146,7 +146,6 @@ BOOST_AUTO_TEST_CASE(ReadMxAODTest) {
 
   outTree->GetEntry(1);
   mapBranch.Print();
-
 }
 
 

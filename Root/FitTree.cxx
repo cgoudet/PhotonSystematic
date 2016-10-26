@@ -565,48 +565,52 @@ void FillDataset( const vector<string> &rootFilesName,
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
 
-      // unsigned int iBranch = 0;
-      // for ( auto vBranch : NPName ) {
-      // 	for ( auto vVar : observablesName ) {
-      // 	  string varName = vBranch + "_" + vVar;
-      // 	  mapCBParameters[vVar]->setVal( mapValuesEntry[varName] );
-      // 	}
-      // 	if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"]->setVal( mapValuesEntry[vBranch+"_weightXS"] );
+      unsigned int iBranch = 0;
+      for ( auto vBranch : NPName ) {
+      	// for ( auto vVar : observablesName ) {
+      	//   string varName = vBranch + "_" + vVar;
+      	//   mapCBParameters[vVar]->setVal( mapValuesEntry[varName] );
+      	// }
+      	// if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"]->setVal( mapValuesEntry[vBranch+"_weightXS"] );
       
-      // 	//Choose the branch in which to read the category
-      // 	int category = 0;
-      // 	if ( analysis == "Couplings"  ) category = mapBranch.GetVal( vBranch+"_cat" );
-      // 	else if ( analysis == "DiffXS" ) category = mapBranch.GetVal( vBranch+"_catXS" );
-      // 	else if ( analysis == "DiffXSPhi" ) category = mapBranch.GetVal( vBranch+"_catXSPhi" );
+      	// //Choose the branch in which to read the category
+      	// int category = 0;
+      	// if ( analysis == "Couplings"  ) category = mapBranch.GetVal( vBranch+"_cat" );
+      	// else if ( analysis == "DiffXS" ) category = mapBranch.GetVal( vBranch+"_catXS" );
+      	// else if ( analysis == "DiffXSPhi" ) category = mapBranch.GetVal( vBranch+"_catXSPhi" );
 
-      // 	while ( mapSet[vBranch].size() < (unsigned int) category+1 ) mapSet[vBranch].push_back(0);
+      	// while ( mapSet[vBranch].size() < (unsigned int) category+1 ) mapSet[vBranch].push_back(0);
 
-      // 	if ( !mapSet[vBranch][0] ) {
-      // 	  string title = vBranch+"_incl";
-      // 	  mapSet[vBranch][0] = new RooDataSet( title.c_str(), title.c_str(), *setObservables, mapCBParameters["weight"]->GetName() );
-      // 	}
-      // 	if ( !mapSet[vBranch][category] ) {
-      // 	  TString title = TString::Format( "%s_cat%d", vBranch.c_str(), category );
-      // 	  mapSet[vBranch][category] = new RooDataSet( title, title, *setObservables,  mapCBParameters["weight"]->GetName() );
-      // 	}
-
-
-      // 	double value = mapCBParameters["m_yy"]->getVal()*mapCBParameters["weight"]->getVal();
-      // 	for ( int i = 0; i<category+1; i+=category ) {
-      // 	  mArrayMean[0][i][iBranch]+=value;
-      // 	  mArrayMean[1][i][iBranch]+=value*value;
-      // 	  mArrayMean[2][i][iBranch]+=mapCBParameters["weight"]->getVal();
-      // 	  mapSet[vBranch][i]->add( *setObservables, mapCBParameters["weight"]->getVal() );
-      // 	}
+      	// if ( !mapSet[vBranch][0] ) {
+      	//   string title = vBranch+"_incl";
+      	//   mapSet[vBranch][0] = new RooDataSet( title.c_str(), title.c_str(), *setObservables, mapCBParameters["weight"]->GetName() );
+      	// }
+      	// if ( !mapSet[vBranch][category] ) {
+      	//   TString title = TString::Format( "%s_cat%d", vBranch.c_str(), category );
+      	//   mapSet[vBranch][category] = new RooDataSet( title, title, *setObservables,  mapCBParameters["weight"]->GetName() );
+      	// }
 
 
-      // 	++iBranch;
+      	// double value = mapCBParameters["m_yy"]->getVal()*mapCBParameters["weight"]->getVal();
+      	// for ( int i = 0; i<category+1; i+=category ) {
+      	//   mArrayMean[0][i][iBranch]+=value;
+      	//   mArrayMean[1][i][iBranch]+=value*value;
+      	//   mArrayMean[2][i][iBranch]+=mapCBParameters["weight"]->getVal();
+      	//   mapSet[vBranch][i]->add( *setObservables, mapCBParameters["weight"]->getVal() );
+      	// }
 
-      // }//end vBranch
+
+      	++iBranch;
+
+      }//end vBranch
     }//end iEntry
     
     delete inTree;
     delete inFile;
   }//end vFileName
 
+}
+
+//==========================================
+string RemoveVar( const string &inName ) {
 }

@@ -150,10 +150,12 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
   	outTree = new TTree( "outTree", "outTree" );
   	outTree->SetDirectory(0);
   	for ( auto itVarName = outBranchesName.begin(); itVarName!=outBranchesName.end(); ++itVarName ) {
-	  cout << "branchName : " << *itVarName << endl;
 	  outTree->Branch(itVarName->c_str(), &mapVal[*itVarName] );
 	}
       }
+
+      //Reinitialize common variables to -99
+      for ( auto it = commonVarsName.begin(); it!=commonVarsName.end(); ++it ) mapVal[*it] = -99;
 
       if ( totEntry % 100000 == 0 )  cout << "totEntry : " << totEntry << endl;
       tevent->getEntry( i_event );
@@ -189,7 +191,6 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 
 
       if ( keepEvent ) { 
-	for ( auto it = mapVal.begin(); it!=mapVal.end(); ++it ) cout <<it->first<<" "<<it->second<<endl;
   	outTree->Fill();
 	totEntry++;
 
@@ -261,7 +262,10 @@ bool FillMapFromEventInfo( const string &outName,
   //Only weight varaibles can eventually return true;
   bool keepEvent = 0;
   if ( varName == "weightXS" ) currentVal = static_cast<bool>(eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weight" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
-  else if ( varName == "weight" ) currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
+  else if ( varName == "weight" ) {
+    cout << "justWeight : " << eventInfo->auxdata< char >( "isPassed" ) << " "<< static_cast<int>( eventInfo->auxdata< char >( "isPassed" )) <<  " " << eventInfo->auxdata<float>( "weightCatCoup_dev" ) << " " << eventInfo->auxdata<float>( "crossSectionBRfilterEff" ) << " " << commonWeight << endl;
+      currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
+}
   else if ( varName == "m_yy" ) currentVal = eventInfo->auxdata<float>( "m_yy" );
   else if ( varName == "catCoup" ) {
     currentVal = eventInfo->auxdata<int>( "catCoup_dev" );
@@ -269,29 +273,29 @@ bool FillMapFromEventInfo( const string &outName,
   }
   else if ( varName == "pt_yy" ) currentVal = eventInfo->auxdata<float>( "pT_yy" );
   else if ( varName == "DPhi_yy" ) currentVal = eventInfo->auxdata<float>( "Dphi_y_y" );
-  else if ( varName == "pt_yy" ) {
+  else if ( varName == "catXS" ) {
     currentVal = eventInfo->auxdata<float>( "pT_yy" )/1e3;//in GeV
-    vector<double> XSCatPt = {0., 40., 60., 100., 200., 9999999.};
+    const vector<double> XSCatPt = GetPtCategXS();
     unsigned int ptCat = 0;
     while ( XSCatPt[ptCat]<currentVal ) ++ptCat;
     currentVal = ptCat;
   }
-  else if ( varName == "DPhi_yy" ) {
+  else if ( varName == "catXSPhi" ) {
     currentVal = eventInfo->auxdata<float>( "Dphi_y_y" );
-    double pi = 3.14159;
-    vector<double> XSCatPhi = {-100, 0, pi/3., 2*pi/3, 5*pi/6, pi };
+    const vector<double> XSCatPhi = GetPhiCategXS();
     unsigned int XSCat=0;
     while ( currentVal> XSCatPhi[XSCat] ) ++XSCat; 
     currentVal = XSCat;
   }
-  if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
-  if ( currentVal != -99 && ( varName == "m_yy" || varName == "pt_yy" ) ) currentVal /=1e3;//Switch energies to GeV
-  if ( varName.find("weight")!=string::npos )  cout << outName << " " << isCommon << " " << currentVal << endl;
-  if ( !isCommon && currentVal != -99 ) {
-    mapVal[outName] = currentVal;
-    cout << outName << " " << mapVal[outName] << endl;
-  }
 
+if ( currentVal != -99 && ( varName == "m_yy" || varName == "pt_yy" ) ) currentVal /=1e3;//Switch energies to GeV
+
+
+if ( !(isCommon && currentVal == -99) ) mapVal[outName] = currentVal;
+
+
+     if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
+     if ( varName.find("weight")!=string::npos )  cout << outName << " " << isCommon << " " << currentVal << endl;
   return keepEvent;
 }
 

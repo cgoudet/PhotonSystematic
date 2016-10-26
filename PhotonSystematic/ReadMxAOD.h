@@ -75,4 +75,15 @@ inline const std::list<std::string>& GetAnalysisProcesses() {
  */
 std::string FindProcessName( const std::string &inFileName );
 
+inline const std::vector<double>& GetPtCategXS() {
+  static const std::vector<double> XSCatPt = {0., 40., 60., 100., 200., 9999999.};
+  return XSCatPt;
+}
+
+inline const std::vector<double>& GetPhiCategXS() {
+  double pi = 3.14159;
+  static const std::vector<double> XSCatPhi = {-100, 0, pi/3., 2*pi/3, 5*pi/6, pi };
+  return XSCatPhi;
+}
+
 #endif
