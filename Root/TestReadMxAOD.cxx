@@ -1,11 +1,13 @@
 #define BOOST_TEST_MODULE ReadMxAODTestSuite
 
+#include "PlotFunctions/MapBranches.h"
 #include "PhotonSystematic/ReadMxAOD.h"
 
 #include "TFile.h"
 #include "xAODRootAccess/TEvent.h"
 #include "xAODEventInfo/EventInfo.h"
 #include "xAODRootAccess/Init.h"
+#include "TTree.h"
 
 #include <stdexcept>
 #include <boost/test/unit_test.hpp>
@@ -135,6 +137,16 @@ BOOST_AUTO_TEST_CASE(FindProcessNameTest) {
 BOOST_AUTO_TEST_CASE(ReadMxAODTest) {
   string inConfFile = "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestReadMxAOD.boost";
   ReadMxAOD( inConfFile, 2 );
+
+  TFile file( "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestOutReadMxAOD.root" );
+  TTree *outTree = static_cast<TTree*>(file.Get("outTree"));
+
+  MapBranches mapBranch;
+  mapBranch.LinkTreeBranches( outTree );
+
+  outTree->GetEntry(1);
+  mapBranch.Print();
+
 }
 
 

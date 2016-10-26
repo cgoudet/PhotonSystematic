@@ -113,7 +113,7 @@ int FitTree( string inConfFileName ) {
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
 
     mapBranch.LinkTreeBranches( inTree );
-    map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
+    const map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
 
     unsigned int nentries = inTree->GetEntries();
     cout << "Entries : " << nentries << endl;
@@ -124,9 +124,9 @@ int FitTree( string inConfFileName ) {
       for ( auto vBranch : NPName ) {
   	for ( auto vVar : observablesName ) {
   	  string varName = vBranch + "_" + vVar;
-  	  mapCBParameters[vVar]->setVal( mapValuesEntry[varName] );
+  	  mapCBParameters[vVar]->setVal( mapValuesEntry.at(varName) );
   	}
-	if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"]->setVal( mapValuesEntry[vBranch+"_weightXS"] );
+	if ( analysis.find( "DiffXS" ) != string::npos ) mapCBParameters["weight"]->setVal( mapValuesEntry.at(vBranch+"_weightXS") );
 
 	//Choose the branch in which to read the category
   	int category = 0;

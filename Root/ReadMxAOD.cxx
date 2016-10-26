@@ -181,7 +181,6 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
 	}
 
 	for ( auto itBranch = outName.begin(); itBranch!=outName.end(); ++itBranch ) {
-	  cout << "itName : " << *itBranch << endl;
 	  bool isCommon = find( commonVarsName.begin(), commonVarsName.end(), ExtractVariable(*itBranch) ) != commonVarsName.end();
 	  keepEvent = keepEvent || FillMapFromEventInfo( *itBranch, mapVal, currentEventInfo, commonWeight, isCommon );
 	}
@@ -192,7 +191,6 @@ int ReadMxAOD( const string &inConfFileName, int debug ) {
       if ( keepEvent ) { 
 	for ( auto it = mapVal.begin(); it!=mapVal.end(); ++it ) cout <<it->first<<" "<<it->second<<endl;
   	outTree->Fill();
-	cout << "keepEvent : " << i_event << endl;
 	totEntry++;
 
       }
@@ -288,7 +286,7 @@ bool FillMapFromEventInfo( const string &outName,
   }
   if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
   if ( currentVal != -99 && ( varName == "m_yy" || varName == "pt_yy" ) ) currentVal /=1e3;//Switch energies to GeV
-  cout << varName << " " << isCommon << " " << currentVal << endl;
+  if ( varName.find("weight")!=string::npos )  cout << outName << " " << isCommon << " " << currentVal << endl;
   if ( !isCommon && currentVal != -99 ) {
     mapVal[outName] = currentVal;
     cout << outName << " " << mapVal[outName] << endl;
