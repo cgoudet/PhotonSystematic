@@ -611,7 +611,6 @@ string RemoveVar( const string &inName ) {
 
 //=============================================
 void FillEntryDataset( const list<string> &NPName, 
-		       //		       const list<string> &observables, 
 		       const MapBranches &mapBranch, 
 		       map<string,vector<RooDataSet*>> &mapSet,
 		       map<string,RooRealVar> &observables,
@@ -629,8 +628,6 @@ void FillEntryDataset( const list<string> &NPName,
     vector<RooDataSet*>  &vectDatasets = mapSet.find( *itNPName )->second;
     
     for ( auto itObs = observables.begin(); itObs!=observables.end(); ++itObs ) {
-      //      map<string,RooRealVar>::iterator posObservable = mapCBParameters.find( *itObs );
-      //      if ( posObservable == mapCBParameters.end() ) throw runtime_error( "FillEntryDataset : observable " + *itObs + " has not been defined." );
       string branchName = branchPrefix+string(itObs->second.GetTitle() );
       itObs->second.setVal( mapBranch.GetVal(branchName) );
       setObservables.add( itObs->second );
@@ -651,7 +648,5 @@ void FillEntryDataset( const list<string> &NPName,
     }
 
     for ( int i = 0; i<category+1; i+=category ) vectDatasets[i]->add( setObservables, weightVar->getVal() );
-
-  }
-
+  }//end itNPName
 }
