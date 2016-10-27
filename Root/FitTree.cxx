@@ -613,40 +613,51 @@ string RemoveVar( const string &inName ) {
 void FillEntryDataset( const list<string> &NPName, 
 		       const MapBranches &mapBranch, 
 		       map<string,vector<RooDataSet*>> &mapSet,
-		       map<string,RooRealVar> &observables,
+		       map<string,RooRealVar*> &observables,
 		       const string &catVar ) {
 
   RooRealVar *weightVar = 0;
   RooArgSet setObservables;		 
   for ( auto itNPName = NPName.begin(); itNPName!=NPName.end(); ++itNPName ) {
-
     string branchPrefix = ( *itNPName!="" ? *itNPName + "_"  : "" );
     string catBranchName = branchPrefix+catVar;
     int category = static_cast<int>( mapBranch.GetVal( catBranchName ) );    
     if ( category == -99 ) continue;
     
-    vector<RooDataSet*>  &vectDatasets = mapSet.find( *itNPName )->second;
-    
     for ( auto itObs = observables.begin(); itObs!=observables.end(); ++itObs ) {
-      string branchName = branchPrefix+string(itObs->second.GetTitle() );
-      itObs->second.setVal( mapBranch.GetVal(branchName) );
-      setObservables.add( itObs->second );
-      if ( string(itObs->second.GetName() ) ==  "weight" ) weightVar = &itObs->second;
+      if ( !itObs->second ) continue;
+
+      string branchName = branchPrefix+string(itObs->second->GetTitle() );
+      itObs->second->setVal( mapBranch.GetVal(branchName) );
+      setObservables.add( *itObs->second );
+
+      if ( string(itObs->second->GetName() ) ==  "weight" ) weightVar = itObs->second;
     }// end itObs
 
-    if ( weightVar->getVal() == 0 ) continue;
+    if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
+    cout << "weightVal : " << weightVar->getVal() << endl;
+    if ( weightVar->getVal() == 0 ) { cout << "continue" << endl; continue;}
 
-    while ( vectDatasets.size() < static_cast<unsigned int>(category+1) ) vectDatasets.push_back(0);
 
-    if ( !vectDatasets[0] ) {
+    vector<RooDataSet*> *vectDataset = &mapSet.find( *itNPName )->second;
+
+    if ( category+1- vectDataset->size() > 0 ) {
+      list<RooDataSet*> dumList( category+1- vectDataset->size(), 0 );
+       mapSet[*itNPName].insert( mapSet[*itNPName].end(), dumList.begin(), dumList.end() );
+       vectDataset = &mapSet.find( *itNPName )->second;
+       cout << "inserted" << endl;
+    }
+
+    cout << "sized : " << vectDataset->size() << endl;
+    if ( !(*vectDataset)[0] ) {
       string title = *itNPName+"_incl";
-      vectDatasets[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
+      (*vectDataset)[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
     }
-    if ( !vectDatasets[category] ) {
+    if ( !(*vectDataset)[category] ) {
       TString title = TString::Format( "%s_cat%d", itNPName->c_str(), category );
-      vectDatasets[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
+      (*vectDataset)[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
     }
 
-    for ( int i = 0; i<category+1; i+=category ) vectDatasets[i]->add( setObservables, weightVar->getVal() );
+    for ( int i = 0; i<category+1; i+=category ) (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
   }//end itNPName
 }

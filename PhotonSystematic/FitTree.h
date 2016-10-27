@@ -15,6 +15,6 @@ void FillInitialValuesFitParam( std::map<std::string,std::vector<double>> &mapIn
 void FillEntryDataset( const std::list<std::string> &NPName, 
 		       const MapBranches &mapBranch, 
 		       map<std::string,vector<RooDataSet*>> &mapSet,
-		       map<std::string,RooRealVar> &observables,
+		       map<std::string,RooRealVar*> &observables,
 		       const std::string &catVar );
 #endif
