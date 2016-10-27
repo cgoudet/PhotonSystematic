@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(FindProcessNameTest) {
 
 BOOST_AUTO_TEST_CASE(ReadMxAODTest) {
   string inConfFile = "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestReadMxAOD.boost";
-  ReadMxAOD( inConfFile, 1 );
+  ReadMxAOD( inConfFile, 2 );
 
   TFile file( "/sps/atlas/c/cgoudet/Hgam/Inputs/TestFiles/TestOutReadMxAOD.root" );
   TTree *outTree = static_cast<TTree*>(file.Get("outTree"));

@@ -68,6 +68,7 @@ int FitTree( string inConfFileName ) {
 
   if ( !NPName.size() ) cout << "FitTree : No branches name provided. Will read all branches" << endl;
 
+
   //Create a directory at the target to hold all results.
   outFileName = StripString( outFileName, 0, 1 );
   system( ("mkdir " + outFileName).c_str() );
@@ -635,16 +636,15 @@ void FillEntryDataset( const list<string> &NPName,
     }// end itObs
 
     if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
-    cout << "weightVal : " << weightVar->getVal() << endl;
-    if ( weightVar->getVal() == 0 ) { cout << "continue" << endl; continue;}
+    if ( weightVar->getVal() == 0 ) continue;
+    cout << "passed null weight : " << weightVar->GetTitle() << " " << weightVar->getVal() << endl;
+    vector<RooDataSet*> *vectDataset = &mapSet[*itNPName];
 
-
-    vector<RooDataSet*> *vectDataset = &mapSet.find( *itNPName )->second;
-
+    //increase the size of the vector if needed
     if ( category+1- vectDataset->size() > 0 ) {
       list<RooDataSet*> dumList( category+1- vectDataset->size(), 0 );
       mapSet[*itNPName].insert( vectDataset->end(), dumList.begin(), dumList.end() );
-      vectDataset = &mapSet.find( *itNPName )->second;
+      vectDataset = &mapSet[*itNPName];
     }
 
     if ( !(*vectDataset)[0] ) {

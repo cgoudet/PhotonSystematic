@@ -38,7 +38,8 @@ BOOST_AUTO_TEST_CASE(FillEntryDatasetTest) {
  outTree->GetEntry(0);
  mapBranch.SetVal( "EG_SCALE_ZEESYST__1down_weight", 1. );
  mapBranch.SetVal( "EG_SCALE_ZEESYST__1down_weightXS", 1. );
- mapBranch.Print();
+ 
+mapBranch.Print();
  list<string> NPName = { "", "EG_SCALE_ZEESYST__1down" };
  map<string,vector<RooDataSet*>> mapSet;
  string catVar = "catCoup";
@@ -49,18 +50,31 @@ BOOST_AUTO_TEST_CASE(FillEntryDatasetTest) {
  BOOST_CHECK_THROW( FillEntryDataset( NPName, mapBranch, mapSet, observables, catVar ), runtime_error );
  observables["weight"] = 0;
  BOOST_CHECK_THROW( FillEntryDataset( NPName, mapBranch, mapSet, observables, catVar ), runtime_error );
- cout << "throw checked" << endl;
- observables["weight"] = new RooRealVar( "weight", "weight", 1);
+
+ observables["weight"] = new RooRealVar( "weight", "weightXS", 1);
  FillEntryDataset( NPName, mapBranch, mapSet, observables, catVar );
- cout <<  "sumEntries" << endl;
- for ( auto vMap : mapSet ) cout << "name : " << vMap.first << endl;
+
+ BOOST_CHECK_EQUAL( static_cast<int>(mapSet.size()), 1 );
+ BOOST_REQUIRE( mapSet.find( "EG_SCALE_ZEESYST__1down" ) != mapSet.end() );
+ BOOST_CHECK_EQUAL( mapSet["EG_SCALE_ZEESYST__1down"].front()->sumEntries(), mapBranch.GetVal( "EG_SCALE_ZEESYST__1down_weightXS" ) );
+ BOOST_CHECK_EQUAL( mapSet["EG_SCALE_ZEESYST__1down"].back()->sumEntries(), mapBranch.GetVal( "EG_SCALE_ZEESYST__1down_weightXS" ) );
+
+ //Cleaning mapSet for second test
+ for ( auto it =mapSet.begin(); it!=mapSet.end(); ++it ) {
+   for ( unsigned int i = 0; i < it->second.size(); ++i ) {
+     if ( it->second[i] ) delete it->second[i];
+   }
+ }
+ mapSet.clear();
+
+ observables["weight"]->SetTitle( "weight" );
+ FillEntryDataset( NPName, mapBranch, mapSet, observables, catVar );
  BOOST_CHECK_EQUAL( static_cast<int>(mapSet.size()), 2 );
- // cout << mapSet[""].front() << endl;
- // cout << mapSet[""].front()->sumEntries() << endl;
- 
- // observables["weight"] = new RooRealVar( "weight", "weightXS", 1);
- // FillEntryDataset( NPName, mapBranch, mapSet, observables, catVar );
- // mapSet[""].front()->sumEntries();
+ BOOST_REQUIRE( mapSet.find( "" ) != mapSet.end() );
+ BOOST_CHECK( mapSet.find( "EG_SCALE_ZEESYST__1down" ) != mapSet.end() );
+
+ BOOST_CHECK_EQUAL( mapSet[""].front()->sumEntries(), mapBranch.GetVal( "weight" ) );
+ BOOST_CHECK_EQUAL( mapSet[""].back()->sumEntries(), mapBranch.GetVal( "weight" ) );
  
 }
 
