@@ -42,7 +42,8 @@ using std::remove;
 void FitTree( string inConfFileName ) {
 
   string outFileName, analysis, fitMethod;
-  vector<string> rootFilesName, categoriesName, NPName;
+  vector<string> rootFilesName, categoriesName;
+  vector<string> vectNPName;
   unsigned int nBins;
   po::options_description configOptions("configOptions");
   configOptions.add_options()
@@ -50,7 +51,7 @@ void FitTree( string inConfFileName ) {
     ( "outFileName", po::value<string>( &outFileName )->default_value("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/dum"), "Name of the ouput. The extension will be removed." )
     ( "categoriesName", po::value<vector<string>>( &categoriesName )->multitoken(), "Names of the categories to consider for NP determination" )
     ( "nBins", po::value<unsigned int>( &nBins )->default_value(220), "Number of bins for binned fit." )
-    ( "NPName", po::value<vector<string>>( &NPName ), "Name of the branches to read" )
+    ( "NPName", po::value<vector<string>>( &vectNPName ), "Name of the branches to read" )
     ( "analysis", po::value<string>( &analysis ), "Analysis which defines the event categorization : \nCouplings : Couplings\nDiffXS : Differential cross-section\nDiffXSPhi : Differential cross-section, phi categorisation" )
     ( "fitMethod", po::value<string>( &fitMethod )->default_value("fitAll_fitExtPOI"), "Name of the fitting method" )
     ;
@@ -60,22 +61,25 @@ void FitTree( string inConfFileName ) {
   po::store(po::parse_config_file(ifs, configOptions), vm);
   po::notify( vm );
 
-  if ( !rootFilesName.size() ) throw invalid_argument( "FitTree : No input files provided in " + inConfFileName );
-  if ( outFileName == "" ) throw invalid_argument( "FitTree : No outFileName provided in " + inConfFileName );
 
-  // const vector<string>  allowedAnalyses = {"Couplings", "DiffXS", "DiffXSPhi" };
-  // if ( find( allowedAnalyses.begin(), allowedAnalyses.end(), analysis ) != allowedAnalyses.end() ) throw invalid_argument( "FitTree : Wrong analysis provided : " + analysis );
+  const list<string> allowedFitMethods = GetAllowedFitMethods();
+  if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
 
-  // const vector<string> allowedFitMethods = { "fitAll_fitPOI", "fitAll_fitExtPOI" };
-  // if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) != allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
+  if ( !vectNPName.size() ) throw invalid_argument( "FitTree : No NP name provided." );
 
-  // if ( !NPName.size() ) cout << "FitTree : No branches name provided. Will read all branches" << endl;
+  map<string,vector<RooDataSet*>> mapSet;
+  list<string> NPName;
+  copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
+  FillDataset( rootFilesName, NPName, analysis, mapSet );
 
 
-  // //Create a directory at the target to hold all results.
-  // outFileName = StripString( outFileName, 0, 1 );
-  // system( ("mkdir " + outFileName).c_str() );
-  // if ( outFileName.back() != '/' ) outFileName+="/";
+  //Create a directory at the target to hold all results.
+  outFileName = StripString( outFileName, 0, 1 );
+  system( ("mkdir " + outFileName).c_str() );
+  if ( outFileName.back() != '/' ) outFileName+="/";
+
+
+
 
 
   // fstream stream;
@@ -86,145 +90,6 @@ void FitTree( string inConfFileName ) {
   // // else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   // // else if ( doXS == 2 ) categoriesNames = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
 
-  // // multi_array<double, 3>  mArrayMean; //hold the exact mean and rms of the weighted dataset
-  // // mArrayMean.resize( extents[3][categoriesName.size()][NPName.size()] );
-
-
-  // //  const vector<string> CBVarName = { "m_yy", "mean", "alphaHi", "nHi", "alphaLow", "nLow", "sigma", "weight" };
-  // // map<string, vector<double>> mapInitValues;
-  // // FillInitialValuesFitParam( mapInitValues );
-  // // stream.open( (outFileName +"dataStat.txt").c_str(), fstream::out );
-  // // for ( int iCat = -1; iCat < (int) mArrayMean[0].size(); ++iCat ) {
-  // //   if ( iCat < 0 ) stream << "Category";
-  // //   else stream << categoriesName[iCat];
-  // //   for ( int iBranch = 0; iBranch < (int) mArrayMean[0][0].size(); ++iBranch ) {
-  // //     for ( int iVar =0; iVar < 2; ++iVar ) {
-  // // 	if ( iCat < 0 ) stream << " " << NPName[iBranch] << "_" << ( iVar ? "sigma" : "mean" );
-  // // 	else {
-  // // 	  if ( !iVar ) mArrayMean[iVar][iCat][iBranch] /= mArrayMean[2][iCat][iBranch];
-  // // 	  else {
-  // // 	    mArrayMean[iVar][iCat][iBranch] = sqrt( mArrayMean[iVar][iCat][iBranch]/mArrayMean[2][iCat][iBranch]-mArrayMean[0][iCat][iBranch]*mArrayMean[0][iCat][iBranch] );
-  // // 	    // cout << mArrayMean[iVar][iCat][iBranch] << " " << mArrayMean[2][iCat][iBranch] << " " << mArrayMean[iVar][iCat][iBranch]/mArrayMean[2][iCat][iBranch] << endl;
-  // // 	    // cout << mArrayMean[0][iCat][iBranch] << " " << mArrayMean[0][iCat][iBranch]*mArrayMean[0][iCat][iBranch] << endl;
-  // // 	  }
-  // // 	  stream << " " << mArrayMean[iVar][iCat][iBranch];
-  // // 	}
-  // //     }
-  // //   }
-  // //   stream << endl;
-  // // }
-  // // stream.close();
-  // //======================================
-  // //Perform the fits
-  // cout << "Perform fit " << endl;
-  // // ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
-  // // ROOT::Math::MinimizerOptions::SetDefaultStrategy(1);
-  // // ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0); 
-  // // ROOT::Math::MinimizerOptions::SetDefaultPrecision(1e-7); 
-
-  // TCanvas can;    
-  // can.SetTopMargin(0.05);
-  // can.SetRightMargin(0.04);
-  
-  // map<string, vector<double>> mapResult;
-  // map<string, vector<RooPlot*>> mapPlot;
-
-  // for ( auto vBranch : NPName ) {
-
-  //   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapCBParameters["m_yy"], *mapCBParameters["mean"], *mapCBParameters["sigma"], *mapCBParameters["alphaLow"], *mapCBParameters["nLow"], *mapCBParameters["alphaHi"], *mapCBParameters["nHi"] );
-    
-  //   for ( unsigned int iCat = 0; iCat < mapSet[vBranch].size(); iCat++ ) {
-  //     if ( !mapSet[vBranch][iCat] )  continue;
-
-  //     double sumEntries = 0;
-	   
-  //     // vector<TObject*> dumVect = { mapSet[vBranch][iCat], pdf };
-  //     // vector<string> options = { "latex=" + vBranch, "latexOpt=0.16 0.9" };
-  //     //      DrawPlot( mapCBParameters["m_yy"], dumVect, outFileName + vBranch, options );
-
-  //     TString name = TString(vBranch).ReplaceAll( "HGamEventInfo_", "").ReplaceAll( "HGamEventInfo", "").ReplaceAll( "__1up", "").ReplaceAll( "__1down", "");
-
-  //     string nominalName = "nominal";
-  //     string fName = (name == "") ? nominalName : string(name);
-  //     nominalName += "_" + std::to_string( iCat );
-
-  //     while ( mapPlot[fName].size() <= iCat   ) mapPlot[fName].push_back(0);
-  //     if ( !mapPlot[fName][iCat] ) {
-  // 	mapPlot[fName][iCat] = mapCBParameters["m_yy"]->frame( 120, 130, 40 );
-  // 	mapPlot[fName][iCat]->UseCurrentStyle();
-  // 	mapPlot[fName][iCat]->SetTitle( "" );
-  // 	mapPlot[fName][iCat]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
-  // 	mapPlot[fName][iCat]->SetYTitle( TString::Format("Entries / %2.3f GeV", (mapPlot[fName][iCat]->GetXaxis()->GetXmax()-mapPlot[fName][iCat]->GetXaxis()->GetXmin())/mapPlot[fName][iCat]->GetNbinsX()) );
-
-  // 	if ( name != "" ) {
-  // 	  mapSet["HGamEventInfo"][iCat]->plotOn( mapPlot[fName][iCat] );
-  // 	  cout << name << " " << mapSet["HGamEventInfo"][iCat]->sumEntries( "m_yy<130 && m_yy>120" );
-  // 	  cout << "sumEntries : " << sumEntries << endl;
-  // 	  for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) mapCBParameters[CBVarName[iVar]]->setVal( mapResult[nominalName][iVar] );
-  // 	  pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor(kBlack) );
-  // 	}
-
-  //     }
-  //     cout << vBranch << " " << categoriesName[iCat] << " " << name << endl;
-      
-  //     string varName = "";
-  //     if ( name.Contains("RESOLUTION") ) varName = "sigma";
-  //     else varName="mean";
-    
-  //     //if testing POI, fix all non poi 
-  //     for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) {
-  // 	if (  CBVarName[iVar]=="m_yy" || CBVarName[iVar]=="weight" ) continue;
-
-  // 	if ( name == ""  ) mapCBParameters[CBVarName[iVar]]->setConstant( 0 );
-  // 	else {
-  // 	  if ( analysis.find( "fitExtPOI" ) != string::npos && ( CBVarName[iVar]=="sigma" || CBVarName[iVar]=="mean"  ) 
-  // 	       ) {
-  // 	    mapCBParameters[CBVarName[iVar]]->setConstant( 0 );
-  // 	  }
-  // 	  else { 
-  // 	    mapCBParameters[CBVarName[iVar]]->setConstant( 1 );
-  // 	    mapCBParameters[CBVarName[iVar]]->setVal( mapResult[nominalName][iVar] );
-  // 	  }
-  // 	}
-  //     }  
-  //     mapCBParameters[varName]->setConstant(0);
-  //     //      RooDataHist *binnedClone = mapSet[vBranch][iCat]->binnedClone();
-
-  //     int nFits = 3;
-  //     double diff = 1;
-  //     do {
-  // 	diff = mapCBParameters[varName]->getVal();
-  // 	// if ( testID == 3 ) pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
-  // 	// else if (testID == 1 ) pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	// else pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	//	pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	diff = ( diff - mapCBParameters[varName]->getVal() )/diff;
-  //     }
-  //     while ( --nFits && diff > 1e-3 );
-
-  //     int shift = TString(vBranch).Contains( "__1up" ) ? CBVarName.size() : 0;
-  //     mapSet[vBranch][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ), RooFit::MarkerColor( shift ? 2 : 3 ) );
-  //     pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ) );
-  //     cout << "sumEntries : " << mapSet[vBranch][iCat]->sumEntries() << endl;
-  //     mapSet[vBranch][iCat]->Print();
-      
-	
-  //     fName += string( TString::Format( "_%d", iCat ) );
-  //     while ( mapResult[fName].size() < 2*CBVarName.size() ) mapResult[fName].push_back( -99 );
-  //     for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) mapResult[fName][shift+iVar] = mapCBParameters[CBVarName[iVar]]->getVal();
-      
-  //     //Print resutls
-  //     // cout << vBranch << endl;
-  //     // cout << mapResult[nominalName][SearchVectorBin(string("mean"),CBVarName)] << " " << mapCBParameters["mean"]->getVal() << endl;
-  //     // cout << mapResult[nominalName][SearchVectorBin(string("sigma"),CBVarName)] << " " << mapCBParameters["sigma"]->getVal() << endl;
-  //     // cout << endl;
-
-  // 	//      }
-  //   }
-  //   // delete pdf;
-  //   // pdf = 0;
-  // }//end vBranch
 
 
 
@@ -468,7 +333,6 @@ void FillDataset( const vector<string> &rootFilesName,
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
 
     mapBranch.LinkTreeBranches( inTree );
-    const map<string, double> &mapValuesEntry = mapBranch.GetMapDouble();
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
@@ -552,3 +416,126 @@ void GetSystematics( const list<string> &branches, list<string> &systs ) {
   systs.sort();
   systs.erase( unique( systs.begin(), systs.end() ), systs.end() );
 }
+
+
+//======================================================
+void FitDatasets( const string &fitMethod, const  list<string> NPName, map<string,vector<RooDataSet*>> &mapSet ) {
+
+  const list<string> allowedFitMethods = GetAllowedFitMethods();
+  if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
+
+
+
+  // //======================================
+  // //Perform the fits
+  // cout << "Perform fit " << endl;
+  // // ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
+  // // ROOT::Math::MinimizerOptions::SetDefaultStrategy(1);
+  // // ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0); 
+  // // ROOT::Math::MinimizerOptions::SetDefaultPrecision(1e-7); 
+
+  // TCanvas can;    
+  // can.SetTopMargin(0.05);
+  // can.SetRightMargin(0.04);
+  
+  // map<string, vector<double>> mapResult;
+  // map<string, vector<RooPlot*>> mapPlot;
+
+  // for ( auto vBranch : NPName ) {
+
+  //   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapCBParameters["m_yy"], *mapCBParameters["mean"], *mapCBParameters["sigma"], *mapCBParameters["alphaLow"], *mapCBParameters["nLow"], *mapCBParameters["alphaHi"], *mapCBParameters["nHi"] );
+    
+  //   for ( unsigned int iCat = 0; iCat < mapSet[vBranch].size(); iCat++ ) {
+  //     if ( !mapSet[vBranch][iCat] )  continue;
+
+  //     double sumEntries = 0;
+	   
+  //     // vector<TObject*> dumVect = { mapSet[vBranch][iCat], pdf };
+  //     // vector<string> options = { "latex=" + vBranch, "latexOpt=0.16 0.9" };
+  //     //      DrawPlot( mapCBParameters["m_yy"], dumVect, outFileName + vBranch, options );
+
+  //     TString name = TString(vBranch).ReplaceAll( "HGamEventInfo_", "").ReplaceAll( "HGamEventInfo", "").ReplaceAll( "__1up", "").ReplaceAll( "__1down", "");
+
+  //     string nominalName = "nominal";
+  //     string fName = (name == "") ? nominalName : string(name);
+  //     nominalName += "_" + std::to_string( iCat );
+
+  //     while ( mapPlot[fName].size() <= iCat   ) mapPlot[fName].push_back(0);
+  //     if ( !mapPlot[fName][iCat] ) {
+  // 	mapPlot[fName][iCat] = mapCBParameters["m_yy"]->frame( 120, 130, 40 );
+  // 	mapPlot[fName][iCat]->UseCurrentStyle();
+  // 	mapPlot[fName][iCat]->SetTitle( "" );
+  // 	mapPlot[fName][iCat]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
+  // 	mapPlot[fName][iCat]->SetYTitle( TString::Format("Entries / %2.3f GeV", (mapPlot[fName][iCat]->GetXaxis()->GetXmax()-mapPlot[fName][iCat]->GetXaxis()->GetXmin())/mapPlot[fName][iCat]->GetNbinsX()) );
+
+  // 	if ( name != "" ) {
+  // 	  mapSet["HGamEventInfo"][iCat]->plotOn( mapPlot[fName][iCat] );
+  // 	  cout << name << " " << mapSet["HGamEventInfo"][iCat]->sumEntries( "m_yy<130 && m_yy>120" );
+  // 	  cout << "sumEntries : " << sumEntries << endl;
+  // 	  for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) mapCBParameters[CBVarName[iVar]]->setVal( mapResult[nominalName][iVar] );
+  // 	  pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor(kBlack) );
+  // 	}
+
+  //     }
+  //     cout << vBranch << " " << categoriesName[iCat] << " " << name << endl;
+      
+  //     string varName = "";
+  //     if ( name.Contains("RESOLUTION") ) varName = "sigma";
+  //     else varName="mean";
+    
+  //     //if testing POI, fix all non poi 
+  //     for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) {
+  // 	if (  CBVarName[iVar]=="m_yy" || CBVarName[iVar]=="weight" ) continue;
+
+  // 	if ( name == ""  ) mapCBParameters[CBVarName[iVar]]->setConstant( 0 );
+  // 	else {
+  // 	  if ( analysis.find( "fitExtPOI" ) != string::npos && ( CBVarName[iVar]=="sigma" || CBVarName[iVar]=="mean"  ) 
+  // 	       ) {
+  // 	    mapCBParameters[CBVarName[iVar]]->setConstant( 0 );
+  // 	  }
+  // 	  else { 
+  // 	    mapCBParameters[CBVarName[iVar]]->setConstant( 1 );
+  // 	    mapCBParameters[CBVarName[iVar]]->setVal( mapResult[nominalName][iVar] );
+  // 	  }
+  // 	}
+  //     }  
+  //     mapCBParameters[varName]->setConstant(0);
+  //     //      RooDataHist *binnedClone = mapSet[vBranch][iCat]->binnedClone();
+
+  //     int nFits = 3;
+  //     double diff = 1;
+  //     do {
+  // 	diff = mapCBParameters[varName]->getVal();
+  // 	// if ( testID == 3 ) pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
+  // 	// else if (testID == 1 ) pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+  // 	// else pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+  // 	//	pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+  // 	pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
+  // 	diff = ( diff - mapCBParameters[varName]->getVal() )/diff;
+  //     }
+  //     while ( --nFits && diff > 1e-3 );
+
+  //     int shift = TString(vBranch).Contains( "__1up" ) ? CBVarName.size() : 0;
+  //     mapSet[vBranch][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ), RooFit::MarkerColor( shift ? 2 : 3 ) );
+  //     pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ) );
+  //     cout << "sumEntries : " << mapSet[vBranch][iCat]->sumEntries() << endl;
+  //     mapSet[vBranch][iCat]->Print();
+      
+	
+  //     fName += string( TString::Format( "_%d", iCat ) );
+  //     while ( mapResult[fName].size() < 2*CBVarName.size() ) mapResult[fName].push_back( -99 );
+  //     for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) mapResult[fName][shift+iVar] = mapCBParameters[CBVarName[iVar]]->getVal();
+      
+  //     //Print resutls
+  //     // cout << vBranch << endl;
+  //     // cout << mapResult[nominalName][SearchVectorBin(string("mean"),CBVarName)] << " " << mapCBParameters["mean"]->getVal() << endl;
+  //     // cout << mapResult[nominalName][SearchVectorBin(string("sigma"),CBVarName)] << " " << mapCBParameters["sigma"]->getVal() << endl;
+  //     // cout << endl;
+
+  // 	//      }
+  //   }
+  //   // delete pdf;
+  //   // pdf = 0;
+  // }//end vBranch
+}
+//====================================================================

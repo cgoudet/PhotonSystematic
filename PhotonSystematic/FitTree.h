@@ -32,9 +32,23 @@ inline const std::list<std::string> &GetAllowedAnalyses() {
   return allowedAnalyses;
 }
 
-inline const std::list<std::string> &GetllowedFitMethods() {
+inline const std::list<std::string> &GetAllowedFitMethods() {
   static const std::list<std::string> allowedFitMethods = {};
   return allowedFitMethods;
 }
+
+
+struct FitResult {
+FitResult() : m_mean(0), m_sigma(0), m_alphaHi(0), m_alphaLow(0), m_nHi(0), m_nLow(0), m_variation(""), m_category(-1 ) {}
+FitResult( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow, std::string variation, int category ) : m_mean(mean), m_sigma(sigma), m_alphaHi(alphaHi), m_alphaLow(alphaLow), m_nHi(nHi), m_nLow(nLow), m_variation(variation), m_category( category ) {}
+  double m_mean;
+  double m_sigma;
+  double m_alphaHi;
+  double m_alphaLow;
+  double m_nHi;
+  double m_nLow;
+  std::string m_variation;
+  int m_category;
+};
 
 #endif
