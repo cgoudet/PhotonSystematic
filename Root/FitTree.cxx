@@ -643,12 +643,12 @@ void FillEntryDataset( const list<string> &NPName,
 
     if ( category+1- vectDataset->size() > 0 ) {
       list<RooDataSet*> dumList( category+1- vectDataset->size(), 0 );
-       mapSet[*itNPName].insert( mapSet[*itNPName].end(), dumList.begin(), dumList.end() );
+      //       mapSet[*itNPName].insert( mapSet[*itNPName].end(), dumList.begin(), dumList.end() );
+      mapSet[*itNPName].insert( vectDataset->end(), dumList.begin(), dumList.end() );
        vectDataset = &mapSet.find( *itNPName )->second;
        cout << "inserted" << endl;
     }
 
-    cout << "sized : " << vectDataset->size() << endl;
     if ( !(*vectDataset)[0] ) {
       string title = *itNPName+"_incl";
       (*vectDataset)[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
