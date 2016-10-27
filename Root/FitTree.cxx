@@ -643,10 +643,8 @@ void FillEntryDataset( const list<string> &NPName,
 
     if ( category+1- vectDataset->size() > 0 ) {
       list<RooDataSet*> dumList( category+1- vectDataset->size(), 0 );
-      //       mapSet[*itNPName].insert( mapSet[*itNPName].end(), dumList.begin(), dumList.end() );
       mapSet[*itNPName].insert( vectDataset->end(), dumList.begin(), dumList.end() );
-       vectDataset = &mapSet.find( *itNPName )->second;
-       cout << "inserted" << endl;
+      vectDataset = &mapSet.find( *itNPName )->second;
     }
 
     if ( !(*vectDataset)[0] ) {
