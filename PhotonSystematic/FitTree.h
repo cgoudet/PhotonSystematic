@@ -2,6 +2,7 @@
 #define FITTREE_H
 
 #include "PlotFunctions/MapBranches.h"
+#include "PhotonSystematic/DataStore.h"
 
 #include "RooDataSet.h"
 #include "RooRealVar.h"
@@ -9,6 +10,8 @@
 #include <string>
 #include <map>
 #include <list>
+
+typedef std::map<std::string,std::vector<RooDataSet*>> MapSet;
 
 void FitTree( std::string inConfFileName );
 void FillInitialValuesFitParam( std::map<std::string,std::vector<double>> &mapInitValues );
@@ -24,6 +27,11 @@ void FillDataset( const std::vector<std::string> &rootFilesName,
 		  std::map<std::string,std::vector<RooDataSet*>> &mapSet
 		  );
 
+void CreateDataStoreList( std::list<DataStore> &dTList, const MapSet &mapSet );
+void FillFluctFit( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar> &mapVar );
+void FixParametersMethod ( unsigned int category, const std::string &fitMethod, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar> &mapVar );
+void FillNominalFit( std::list<DataStore> &dataStore, std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar> &mapVar );
+
 void GetSystematics( const std::list<std::string> &branches, std::list<std::string> &systs );
 std::string RemoveVar( const std::string &inName );
 
@@ -38,17 +46,5 @@ inline const std::list<std::string> &GetAllowedFitMethods() {
 }
 
 
-struct FitResult {
-FitResult() : m_mean(0), m_sigma(0), m_alphaHi(0), m_alphaLow(0), m_nHi(0), m_nLow(0), m_variation(""), m_category(-1 ) {}
-FitResult( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow, std::string variation, int category ) : m_mean(mean), m_sigma(sigma), m_alphaHi(alphaHi), m_alphaLow(alphaLow), m_nHi(nHi), m_nLow(nLow), m_variation(variation), m_category( category ) {}
-  double m_mean;
-  double m_sigma;
-  double m_alphaHi;
-  double m_alphaLow;
-  double m_nHi;
-  double m_nLow;
-  std::string m_variation;
-  int m_category;
-};
 
 #endif

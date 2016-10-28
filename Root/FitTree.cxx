@@ -5,6 +5,7 @@
 #include "PlotFunctions/MapBranches.h"
 #include "PlotFunctions/RobustMinimize.h"
 #include "PlotFunctions/SideFunctionsTpp.h"
+#include "PhotonSystematic/DataStore.h"
 
 #include "RooDataSet.h"
 #include "RooRealVar.h"
@@ -67,7 +68,7 @@ void FitTree( string inConfFileName ) {
 
   if ( !vectNPName.size() ) throw invalid_argument( "FitTree : No NP name provided." );
 
-  map<string,vector<RooDataSet*>> mapSet;
+  MapSet mapSet;
   list<string> NPName;
   copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
   FillDataset( rootFilesName, NPName, analysis, mapSet );
@@ -296,7 +297,7 @@ void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
 void FillDataset( const vector<string> &rootFilesName,
 		  const list<string> &NPName,
 		  const string &analysis,
-		  map<string,vector<RooDataSet*>> &mapSet
+		  MapSet &mapSet
 		  ) {
   if ( !rootFilesName.size() ) throw invalid_argument( "FillDataset : No input files provided." );
   if ( !NPName.size() ) throw invalid_argument( "FillDataset : No NP name provided." );
@@ -360,7 +361,7 @@ string RemoveVar( const string &inName ) {
 //=============================================
 void FillEntryDataset( const list<string> &NPName, 
 		       const MapBranches &mapBranch, 
-		       map<string,vector<RooDataSet*>> &mapSet,
+		       MapSet &mapSet,
 		       map<string,RooRealVar*> &observables,
 		       const string &catVar ) {
 
@@ -419,123 +420,85 @@ void GetSystematics( const list<string> &branches, list<string> &systs ) {
 
 
 //======================================================
-void FitDatasets( const string &fitMethod, const  list<string> NPName, map<string,vector<RooDataSet*>> &mapSet ) {
+void CreateDataStoreList( list<DataStore> &dTList, const MapSet &mapSet ) {
+  for ( MapSet::const_iterator itMapSet = mapSet.begin(); itMapSet!=mapSet.end(); ++itMapSet ) {
+    for ( unsigned int iCat = 0; iCat < itMapSet->second.size(); ++iCat ) {
+	if ( !itMapSet->second[iCat] ) continue;
+	dTList.push_back( DataStore( itMapSet->first, iCat, itMapSet->second[iCat] ) );
+    }
+  }
+}
+//====================================================================
+void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf &pdf, map<string,RooRealVar> &mapVar ) {
+  for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
+    if ( itData->GetName() != "" ) continue;
+    itData->Fit( pdf );
+    itData->FillDSCB( mapVar["mean"].getVal(), mapVar["sigma"].getVal(), mapVar["alphaHi"].getVal(), mapVar["alphaLow"].getVal(), mapVar["nHi"].getVal(), mapVar["nLow"].getVal() );
+    
+    unsigned category = static_cast<unsigned>(itData->GetCategory());
+    while ( nominalFit.size() < category ) nominalFit.push_back(0);
+    nominalFit[category] = &(*itData);
+  }
+}
+//======================================================
+void FixParametersMethod ( unsigned int category, const string &fitMethod, const vector<DataStore*> &nominalFit, map<string,RooRealVar> &mapVar ) {
+
+  if ( fitMethod == "fitAll_fitExtPOI" ) {
+    mapVar["mean"].setConstant(0);
+    mapVar["mean"].setVal( nominalFit[category]->GetMean() );
+  }
+
+  if ( fitMethod == "fitAll_fitExtPOI" ) {
+    mapVar["sigma"].setConstant(0);
+    mapVar["sigma"].setVal( nominalFit[category]->GetSigma() );
+  }
+    
+  if ( fitMethod == "fitAll_fitExtPOI" ) {
+    mapVar["alphaHi"].setConstant(1);
+    mapVar["alphaHi"].setVal( nominalFit[category]->GetAlphaHi() );
+    mapVar["alphaLow"].setConstant(1);
+    mapVar["alphaLow"].setVal( nominalFit[category]->GetAlphaLow() );
+  }
+
+  if ( fitMethod == "fitAll_fitExtPOI" ) {
+    mapVar["nHi"].setConstant(1);
+    mapVar["nHi"].setVal( nominalFit[category]->GetNHi() );
+    mapVar["nLow"].setConstant(1);
+    mapVar["nLow"].setVal( nominalFit[category]->GetNLow() );
+  }
+
+}
+//======================================================
+void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const vector<DataStore*> &nominalFit, RooAbsPdf &pdf, map<string,RooRealVar> &mapVar ) {
+  for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
+    if ( itData->GetName() == "" ) continue;
+    unsigned category = static_cast<unsigned>(itData->GetCategory());
+    FixParametersMethod( category, fitMethod, nominalFit, mapVar );
+
+    itData->Fit( pdf );
+    itData->FillDSCB( mapVar["mean"].getVal(), mapVar["sigma"].getVal(), mapVar["alphaHi"].getVal(), mapVar["alphaLow"].getVal(), mapVar["nHi"].getVal(), mapVar["nLow"].getVal() );
+  }
+}
+//======================================================
+void FitDatasets( const string &fitMethod, list<DataStore> &dataStore ) {
 
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
+  map<string,RooRealVar> mapVar;
+  mapVar["mass"]=RooRealVar( "m_yy", "mass", 105, 160);
+  mapVar["mean"]=RooRealVar( "mean", "mean", 120, 130 );
+  mapVar["sigma"]=RooRealVar( "sigma", "sigma", 0, 10 );
+  mapVar["alphaHi"]=RooRealVar( "alphaHi", "alphaHi", 0, 10 );
+  mapVar["alphaLow"]=RooRealVar( "alphaLow", "alphaLow", 0, 10 );
+  mapVar["nHi"]=RooRealVar( "nHi", "nHi", 0, 10 );
+  mapVar["nLow"]=RooRealVar( "nLow", "nLow", 0, 10 );
 
+  HggTwoSidedCBPdf pdf( "pdf", "pdf", mapVar["mass"], mapVar["mean"], mapVar["sigma"], mapVar["alphaLow"], mapVar["nLow"], mapVar["alphaHi"], mapVar["nHi"] );
 
+  vector<DataStore*> nominalFit;
+  FillNominalFit( dataStore, nominalFit, pdf, mapVar );
+  FillFluctFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
 
-  // //======================================
-  // //Perform the fits
-  // cout << "Perform fit " << endl;
-  // // ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
-  // // ROOT::Math::MinimizerOptions::SetDefaultStrategy(1);
-  // // ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0); 
-  // // ROOT::Math::MinimizerOptions::SetDefaultPrecision(1e-7); 
-
-  // TCanvas can;    
-  // can.SetTopMargin(0.05);
-  // can.SetRightMargin(0.04);
-  
-  // map<string, vector<double>> mapResult;
-  // map<string, vector<RooPlot*>> mapPlot;
-
-  // for ( auto vBranch : NPName ) {
-
-  //   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapCBParameters["m_yy"], *mapCBParameters["mean"], *mapCBParameters["sigma"], *mapCBParameters["alphaLow"], *mapCBParameters["nLow"], *mapCBParameters["alphaHi"], *mapCBParameters["nHi"] );
-    
-  //   for ( unsigned int iCat = 0; iCat < mapSet[vBranch].size(); iCat++ ) {
-  //     if ( !mapSet[vBranch][iCat] )  continue;
-
-  //     double sumEntries = 0;
-	   
-  //     // vector<TObject*> dumVect = { mapSet[vBranch][iCat], pdf };
-  //     // vector<string> options = { "latex=" + vBranch, "latexOpt=0.16 0.9" };
-  //     //      DrawPlot( mapCBParameters["m_yy"], dumVect, outFileName + vBranch, options );
-
-  //     TString name = TString(vBranch).ReplaceAll( "HGamEventInfo_", "").ReplaceAll( "HGamEventInfo", "").ReplaceAll( "__1up", "").ReplaceAll( "__1down", "");
-
-  //     string nominalName = "nominal";
-  //     string fName = (name == "") ? nominalName : string(name);
-  //     nominalName += "_" + std::to_string( iCat );
-
-  //     while ( mapPlot[fName].size() <= iCat   ) mapPlot[fName].push_back(0);
-  //     if ( !mapPlot[fName][iCat] ) {
-  // 	mapPlot[fName][iCat] = mapCBParameters["m_yy"]->frame( 120, 130, 40 );
-  // 	mapPlot[fName][iCat]->UseCurrentStyle();
-  // 	mapPlot[fName][iCat]->SetTitle( "" );
-  // 	mapPlot[fName][iCat]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
-  // 	mapPlot[fName][iCat]->SetYTitle( TString::Format("Entries / %2.3f GeV", (mapPlot[fName][iCat]->GetXaxis()->GetXmax()-mapPlot[fName][iCat]->GetXaxis()->GetXmin())/mapPlot[fName][iCat]->GetNbinsX()) );
-
-  // 	if ( name != "" ) {
-  // 	  mapSet["HGamEventInfo"][iCat]->plotOn( mapPlot[fName][iCat] );
-  // 	  cout << name << " " << mapSet["HGamEventInfo"][iCat]->sumEntries( "m_yy<130 && m_yy>120" );
-  // 	  cout << "sumEntries : " << sumEntries << endl;
-  // 	  for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) mapCBParameters[CBVarName[iVar]]->setVal( mapResult[nominalName][iVar] );
-  // 	  pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor(kBlack) );
-  // 	}
-
-  //     }
-  //     cout << vBranch << " " << categoriesName[iCat] << " " << name << endl;
-      
-  //     string varName = "";
-  //     if ( name.Contains("RESOLUTION") ) varName = "sigma";
-  //     else varName="mean";
-    
-  //     //if testing POI, fix all non poi 
-  //     for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) {
-  // 	if (  CBVarName[iVar]=="m_yy" || CBVarName[iVar]=="weight" ) continue;
-
-  // 	if ( name == ""  ) mapCBParameters[CBVarName[iVar]]->setConstant( 0 );
-  // 	else {
-  // 	  if ( analysis.find( "fitExtPOI" ) != string::npos && ( CBVarName[iVar]=="sigma" || CBVarName[iVar]=="mean"  ) 
-  // 	       ) {
-  // 	    mapCBParameters[CBVarName[iVar]]->setConstant( 0 );
-  // 	  }
-  // 	  else { 
-  // 	    mapCBParameters[CBVarName[iVar]]->setConstant( 1 );
-  // 	    mapCBParameters[CBVarName[iVar]]->setVal( mapResult[nominalName][iVar] );
-  // 	  }
-  // 	}
-  //     }  
-  //     mapCBParameters[varName]->setConstant(0);
-  //     //      RooDataHist *binnedClone = mapSet[vBranch][iCat]->binnedClone();
-
-  //     int nFits = 3;
-  //     double diff = 1;
-  //     do {
-  // 	diff = mapCBParameters[varName]->getVal();
-  // 	// if ( testID == 3 ) pdf->fitTo( *mapSet[vBranch][iCat], RooFit::Range(120,130), RooFit::SumW2Error(0), RooFit::Offset(1) );
-  // 	// else if (testID == 1 ) pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	// else pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	//	pdf->fitTo( *binnedClone, RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	pdf->fitTo( *mapSet[vBranch][iCat], RooFit::SumW2Error(kFALSE), RooFit::Offset(1) );
-  // 	diff = ( diff - mapCBParameters[varName]->getVal() )/diff;
-  //     }
-  //     while ( --nFits && diff > 1e-3 );
-
-  //     int shift = TString(vBranch).Contains( "__1up" ) ? CBVarName.size() : 0;
-  //     mapSet[vBranch][iCat]->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ), RooFit::MarkerColor( shift ? 2 : 3 ) );
-  //     pdf->plotOn( mapPlot[fName][iCat], RooFit::LineColor( shift ? 2 : 3 ) );
-  //     cout << "sumEntries : " << mapSet[vBranch][iCat]->sumEntries() << endl;
-  //     mapSet[vBranch][iCat]->Print();
-      
-	
-  //     fName += string( TString::Format( "_%d", iCat ) );
-  //     while ( mapResult[fName].size() < 2*CBVarName.size() ) mapResult[fName].push_back( -99 );
-  //     for ( unsigned int iVar=1; iVar<CBVarName.size(); iVar++ ) mapResult[fName][shift+iVar] = mapCBParameters[CBVarName[iVar]]->getVal();
-      
-  //     //Print resutls
-  //     // cout << vBranch << endl;
-  //     // cout << mapResult[nominalName][SearchVectorBin(string("mean"),CBVarName)] << " " << mapCBParameters["mean"]->getVal() << endl;
-  //     // cout << mapResult[nominalName][SearchVectorBin(string("sigma"),CBVarName)] << " " << mapCBParameters["sigma"]->getVal() << endl;
-  //     // cout << endl;
-
-  // 	//      }
-  //   }
-  //   // delete pdf;
-  //   // pdf = 0;
-  // }//end vBranch
 }
+
 //====================================================================
