@@ -1,15 +1,20 @@
 #include "PhotonSystematic/DataStore.h"
 #include "PlotFunctions/RobustMinimize.h"
+#include "RooAbsReal.h"
+#include "RooDataSet.h"
+#include "RooAbsPdf.h"
 
 #include <iostream>
 using std::cout;
 using std::endl;
 using std::string;
-DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
+DataStore::DataStore( string name, int category, RooDataSet* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
 //=========================
 
-void DataStore::Fit( RooAbsPdf &pdf ) const {
-  FitData( m_dataset, &pdf );
+void DataStore::Fit( RooAbsPdf *pdf ) {
+  if ( !m_dataset ) return ;
+  if ( m_dataset->numEntries() < 10 ) FillDSCB( -99., -99., -99., -99., -99., -99. );
+  else FitData( m_dataset, pdf, -1 );
 }
 //=========================
 void DataStore::FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow ) {
@@ -32,4 +37,27 @@ void DataStore::Print() {
   cout << "nHi : " << m_nHi << endl;
   cout << "alphaLow : " << m_alphaLow << endl;
   cout << "nLow : " << m_nLow << endl;
+}
+
+//=========================
+void DataStore::Divide( const DataStore &dataStore ) {
+
+  if ( dataStore.m_mean != 0 ) m_mean = ( m_mean - dataStore.m_mean)/dataStore.m_mean;
+  else m_mean = 1;
+
+  if ( dataStore.m_sigma != 0 ) m_sigma = ( m_sigma - dataStore.m_sigma)/dataStore.m_sigma;
+  else m_sigma = 1;
+
+  if ( dataStore.m_alphaHi != 0 ) m_alphaHi = ( m_alphaHi - dataStore.m_alphaHi)/dataStore.m_alphaHi;
+  else m_alphaHi = 1;
+
+  if ( dataStore.m_alphaLow != 0 ) m_alphaLow = ( m_alphaLow - dataStore.m_alphaLow)/dataStore.m_alphaLow;
+  else m_alphaLow = 1;
+
+  if ( dataStore.m_nHi != 0 ) m_nHi = ( m_nHi - dataStore.m_nHi)/dataStore.m_nHi;
+  else m_nHi = 1;
+
+  if ( dataStore.m_nLow != 0 ) m_nLow = ( m_nLow - dataStore.m_nLow)/dataStore.m_nLow;
+  else m_nLow = 1;
+
 }

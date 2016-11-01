@@ -121,7 +121,7 @@ int GaussWeight() {
 
 //###################################
 int main() {
-  //  SpreadGauss();
-  GaussWeight();
+  SpreadGauss();
+  //GaussWeight();
   return 0;
 }

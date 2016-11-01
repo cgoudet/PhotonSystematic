@@ -14,7 +14,7 @@
 
   
  */
-int ReadMxAOD( const std::string &inConfFileName, int debug = 0 );
+int ReadMxAOD( const std::vector<std::string> &rootFilesName, std::string outDirectory, const std::string &inConfFileName, int debug = 0 );
 
 /*\brief Reweight diphton events according to the pt of the system
   \param initPt Truth Pt of the diphoton system.
@@ -63,7 +63,7 @@ std::string ExtractVariable( const std::string &inName );
   Tested.
  */
 inline const std::list<std::string>& GetAnalysisVariables() { 
-  static const std::list<std::string> vect = { "m_yy", "pt_yy","catCoup","catXS","DPhi_yy","weightXS","catXSPhi","weight"};
+  static const std::list<std::string> vect = { "DPhi_yy","catCoup","catXS","catXSPhi","m_yy", "pt_yy","weight","weightXS"};
   return vect;
 }
 

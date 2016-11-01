@@ -3,27 +3,33 @@ namespace po = boost::program_options;
 #include "PhotonSystematic/FitTree.h"
 #include "PhotonSystematic/ReadMxAOD.h"
 #include <iostream>
+#include <vector>
+
 using std::string;
 using std::cout;
 using std::endl;
+using std::vector;
 int main( int argc, char* argv[] ) {
 
   po::options_description desc("LikelihoodProfiel Usage");
 
-  string inConfFile;
+  string inConfFile, outFile;
   int mode, debug;
+  vector<string> inFilesName;
   //define all options in the program
   desc.add_options()
     ( "help", "Display this help message")
     ( "inConfFile", po::value<string>(&inConfFile), "" )
     ( "mode", po::value<int>( &mode )->default_value(0), "" )
     ( "debug", po::value<int>( &debug )->default_value(0), "" )
+    ( "inFileName", po::value<vector<string>>( &inFilesName )->multitoken(), "" )
+    ( "outFileName", po::value<string>( &outFile ), "" );
     // ( "testID", po::value<int>( &testID ), "Identifier to select one of possible test in FitTree method : \n1 : unbinned fit\n2 : only POI is fitted in variations\n3 : fit mass distribution within 120-130\n4 : Fit only mean and sigma for fluctuation (keep alpha fixed)\n" )
     ;
   
   //Define options gathered by position                                                          
   po::positional_options_description p;
-  p.add("inConfFile", 1);
+  p.add("inFileName", -1);
 
   // create a map vm that contains options and all arguments of options       
   po::variables_map vm;
@@ -33,8 +39,8 @@ int main( int argc, char* argv[] ) {
   if (vm.count("help")) {cout << desc; return 0;}
   //=============================================
 
-  if ( mode == 0 ) ReadMxAOD( inConfFile, debug );
-  else if ( mode == 1 ) FitTree( inConfFile );
+  if ( mode == 0 ) ReadMxAOD( inFilesName, outFile, inConfFile, debug );
+  else if ( mode == 1 ) FitTree( inFilesName, outFile, inConfFile );
 
   return 0;
 }
