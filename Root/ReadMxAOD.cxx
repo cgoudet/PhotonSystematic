@@ -35,7 +35,7 @@ namespace po = boost::program_options;
 #include <math.h>
 
 using namespace std;
-
+using namespace ChrisLib;
 
 //#################
 int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const string &inConfFileName, int debug ) {
@@ -214,7 +214,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
       
-      if ( ( totEntry%500000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
+      if ( ( totEntry%100000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
   	string dumName = isOutputDirectory ? outDirectory : outDirectory + StripString(*itFileName, 1, 0);
   	cout << "saving : " << dumName << endl;
   	cout << "entries : " << outTree->GetEntries() << endl;

@@ -24,11 +24,10 @@ using std::map;
 using std::runtime_error;
 using std::vector;
 using std::invalid_argument;
+using namespace ChrisLib;
 
 // The name of the suite must be a different name to your class
 BOOST_AUTO_TEST_SUITE( FitTreeSuite )
-
-//============================================================
 
 //============================================================
 BOOST_AUTO_TEST_CASE( RemoveVarTest ) {
@@ -52,6 +51,21 @@ BOOST_AUTO_TEST_CASE( GetSystematicsTest ) {
   BOOST_CHECK( testList == outList );
 }
 //============================================================
+BOOST_AUTO_TEST_CASE( GetCommonVarsTest ) {
+  MapBranches mapBranch;
+  list<string> branches = { "branch1_var1", "var1", "var0", "var2_yy", "branch1_var2_yy", "var3_yy", "branch1_var4_yy", "branch1_var5"  };
+  for ( auto it = branches.begin(); it!=branches.end(); ++it ) mapBranch.SetVal( *it, 1 );
+
+  list<string> testBranch = { "var0", "var3_yy", "var4_yy", "var5" };
+  testBranch.sort();
+  list<string> outList;
+
+  GetCommonVars( mapBranch, outList );
+
+  BOOST_CHECK_EQUAL( outList.size(), testBranch.size() );
+  BOOST_CHECK( equal( outList.begin(), outList.end(), testBranch.begin() ) );
+  
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

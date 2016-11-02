@@ -23,6 +23,8 @@ using std::map;
 using std::string;
 using std::list;
 using std::runtime_error;
+using namespace ChrisLib;
+
 // The name of the suite must be a different name to your class                                                                                                                                      
 
 BOOST_AUTO_TEST_SUITE( ReadMxAODSuite )

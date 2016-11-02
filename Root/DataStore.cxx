@@ -8,6 +8,8 @@
 using std::cout;
 using std::endl;
 using std::string;
+using namespace ChrisLib;
+
 DataStore::DataStore( string name, int category, RooDataSet* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
 //=========================
 

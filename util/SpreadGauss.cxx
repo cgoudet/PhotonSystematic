@@ -18,6 +18,7 @@ using std::cout;
 using std::endl;
 using std::string;
 using std::to_string;
+using namespace ChrisLib;
 
 //################################################
 void SpreadGauss() {

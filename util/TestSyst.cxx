@@ -24,7 +24,6 @@ int main( int argc, char* argv[] ) {
     ( "debug", po::value<int>( &debug )->default_value(0), "" )
     ( "inFileName", po::value<vector<string>>( &inFilesName )->multitoken(), "" )
     ( "outFileName", po::value<string>( &outFile ), "" );
-    // ( "testID", po::value<int>( &testID ), "Identifier to select one of possible test in FitTree method : \n1 : unbinned fit\n2 : only POI is fitted in variations\n3 : fit mass distribution within 120-130\n4 : Fit only mean and sigma for fluctuation (keep alpha fixed)\n" )
     ;
   
   //Define options gathered by position                                                          

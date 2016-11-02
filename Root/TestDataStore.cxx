@@ -13,18 +13,17 @@
 BOOST_AUTO_TEST_SUITE( DataStoreSuite )
 
 BOOST_AUTO_TEST_CASE( FitTest ) {
-  TH1D hist("hist", "hist", 100,-5, 5 );
-  hist.FillRandom( "gaus", 1e6 );
+  // TH1D hist("hist", "hist", 100,-5, 5 );
+  // hist.FillRandom( "gaus", 1e6 );
 
-  RooRealVar mass( "mass", "mass", 0, -5, 5 );
-  RooRealVar mean( "mean", "mean", 0, -5, 5 );
-  RooRealVar sigma( "sigma", "sigma", 1, 0, 3 );
+  // RooRealVar mass( "mass", "mass", 0, -5, 5 );
+  // RooRealVar mean( "mean", "mean", 0, -5, 5 );
+  // RooRealVar sigma( "sigma", "sigma", 1, 0, 3 );
 
-  RooDataHist dataHist( "datahist", "datahist", RooArgSet(mass), &hist );
-  RooGaussian pdf( "gaus", "gaus", mass, mean, sigma );
+  // RooDataHist dataHist( "datahist", "datahist", RooArgSet(mass), &hist );
+  // RooGaussian pdf( "gaus", "gaus", mass, mean, sigma );
 
-  //  DataStore( "name", 0, 
-  FitData( &dataHist, &pdf, -1 );
+  // FitData( &dataHist, &pdf, -1 );
 
 }
 

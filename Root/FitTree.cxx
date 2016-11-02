@@ -41,6 +41,11 @@ using std::map;
 using std::ifstream;
 using std::unique;
 using std::remove;
+using std::list;
+using std::invalid_argument;
+using std::runtime_error;
+
+using namespace ChrisLib;
 
 void FitTree( const vector<string> &rootFilesName,  string outFileName, const string &inConfFileName ) {
 
@@ -164,7 +169,9 @@ void FillDataset( const vector<string> &rootFilesName,
 
     if ( vFileName == rootFilesName.front() ) {
       GetCommonVars( mapBranch, listBranches );
-      GetNPName( mapBranch, NPName );
+      list<string> keys;
+      mapBranch.GetKeys( keys );
+      GetSystematics( keys, NPName );
     }
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
@@ -410,25 +417,17 @@ void GetCommonVars( MapBranches &mapBranch, list<string> &commonVars ) {
   mapBranch.GetKeys(listKeys);
   transform( listKeys.begin(), listKeys.end(), listKeys.begin(), ExtractVariable );
   listKeys.sort();
-
   list<string>::iterator endUnique = unique( listKeys.begin(), listKeys.end() );
 
   list<string> doubles;
   copy( endUnique, listKeys.end(), back_inserter(doubles) );
+  doubles.sort();
   doubles.erase( unique( doubles.begin(), doubles.end() ), doubles.end() );
-  //  doubles.sort();
 
   listKeys.erase( endUnique, listKeys.end() );
-  //  listKeys.sort();
 
   set_difference( listKeys.begin(), listKeys.end(), doubles.begin(), doubles.end(), back_inserter(commonVars) );
-  //  copy( commonVars.begin(), commonVars.end(), ostream_iterator<string>(cout,"\n") );
 }
 
  //===========================================================
-void GetNPName( MapBranches &mapBranch, list<string> &NPName ) {
- mapBranch.GetKeys(NPName);
- transform( NPName.begin(), NPName.end(), NPName.begin(), RemoveVar );
- NPName.sort();
- NPName.erase( unique( NPName.begin(), NPName.end()), NPName.end() );
-}
+
