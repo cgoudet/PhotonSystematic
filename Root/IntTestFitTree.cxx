@@ -45,6 +45,10 @@ bool TestFitTree() {
   TestCreateDataStoreList( mapSet, dtList );
 
   TestFitDatasets( dtList );
+
+  string outFileName = "/sps/atlas/c/cgoudet/Plots/TestPrintFit";
+  vector<string> categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};;
+  PrintResult( dtList, outFileName, categoriesName );
   return true;
 }
 

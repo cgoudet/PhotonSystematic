@@ -44,6 +44,7 @@ using std::remove;
 using std::list;
 using std::invalid_argument;
 using std::runtime_error;
+using std::max;
 
 using namespace ChrisLib;
 
@@ -359,40 +360,54 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore ) {
 
 //====================================================================
 void FillArray( const DataStore &dataStore, const unsigned fluctLine, map<string,multi_array<double,2>> &array  ) {
-   string name = dataStore.GetName();
-   if ( name == "" ) return;
+  string name = dataStore.GetName();
+  if ( name == "" ) return;
+  bool isUp = 0;
+  if ( name.find( "__1up" ) != string::npos ) isUp=1;
+  
+  unsigned column = dataStore.GetCategory() + isUp;
+  unsigned arrayLines = max( fluctLine+1, static_cast<unsigned>(array.begin()->second.size()) );
+  unsigned arrayCols = column+1;
+  if ( array.begin()->second.size() ) arrayCols = max( arrayCols, static_cast<unsigned>(array.begin()->second[0].size()) );
 
-   bool isUp = 0;
-   if ( name.find( "__1up" ) != string::npos ) isUp=1;
+  for ( auto itArray=array.begin(); itArray!=array.end(); ++itArray ) itArray->second.resize( extents[arrayLines][arrayCols] );
 
-   unsigned column = dataStore.GetCategory() + isUp;
-   array["mean"][fluctLine][column] = dataStore.GetMean();
-   array["sigma"][fluctLine][column] = dataStore.GetSigma();
-
+  array["mean"][fluctLine][column] = dataStore.GetMean();
+  array["sigma"][fluctLine][column] = dataStore.GetSigma();
+  
  }  
  //====================================================================
 void PrintResult( const list<DataStore> &lDataStore, const string &outFile, const vector<string> &categoriesName ) {
+  cout << "PrintResult" << endl;
 
    map<string,multi_array<double,2>> tables;
    list<string> variables = GetVariables();
    for ( auto itVar = variables.begin(); itVar!=variables.end(); ++itVar ) tables[*itVar] = multi_array<double,2>();
+   cout << "pushed table" << endl;
 
    map<string,unsigned> systIndex;
-
+   int nCats=-1;
+   vector<string> linesName;
    for ( auto itDataStore = lDataStore.begin(); itDataStore!=lDataStore.end(); ++itDataStore ) {
      string systName = RemoveVar( itDataStore->GetName() );
+     nCats = max( nCats, itDataStore->GetCategory() );
 
      auto posSyst = systIndex.find( systName );
      unsigned index = systIndex.size();
-     if ( posSyst == systIndex.end() ) systIndex[systName] = index;
+     if ( posSyst == systIndex.end() ) {
+       systIndex[systName] = index;
+       linesName.push_back( systName );
+     }
      else index = posSyst->second;
 
      FillArray( *itDataStore, index, tables );
    }
-
-   vector<string> linesName( systIndex.size(), "" );
-   for ( auto itSyst = systIndex.begin(); itSyst!=systIndex.end(); ++itSyst ) linesName[itSyst->second] = itSyst->first;
+   if ( nCats < 0 ) throw runtime_error( "PrintResult : No valid categories." );
+   cout << "filled array" << endl;
+   exit(0);
+   
    vector<string> colsName={"systName"};
+
 
    list<list<string>> forInCombine;
    forInCombine.push_back( list<string>() );
