@@ -12,8 +12,8 @@ bool TestFillDataSet( MapSet &mapSet ) {
   vector<string> rootFilesName = { fileName };
 
   string analysis = "Couplings";
-
-  FillDataset( rootFilesName, analysis, mapSet );
+  list<string> NPName;
+  FillDataset( rootFilesName, analysis, mapSet, NPName );
   //  cout << "size : " << mapSet.size() << endl;
   if ( mapSet.size() != 159 ) throw logic_error( "TestFillDataSet : Wrong MapSet size." );
   if ( mapSet["EG_SCALE_ZEESYST__1down"][0]->numEntries() != 1744 ) throw logic_error( "TestFillDataSet : Wrong numEntries EG_SCALE_ZEESYST__1down != 1744" );
@@ -30,7 +30,9 @@ bool TestCreateDataStoreList( const MapSet &mapSet, list<DataStore> &dtList ) {
 //===========================================================
 bool TestFitDatasets( list<DataStore> &dtList ) {
   string fitMethod ="fitAll_fitExtPOI";
-  FitDatasets( fitMethod, dtList );
+  vector<string> systOnly = { "EG_SCALE_ZEESYST__1down", "EG_SCALE_ZEESYST__1up" };
+  vector<unsigned> catOnly = { 0 };
+  FitDatasets( fitMethod, dtList, catOnly, systOnly );
 
   return true;
 }

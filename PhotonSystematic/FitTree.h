@@ -14,7 +14,7 @@
 
 typedef std::map<std::string,std::vector<RooDataSet*>> MapSet;
 
-void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore );
+void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly );
 void FitTree( const std::vector<std::string> &rootFilesName, std::string outFileName, const std::string &inConfFileName );
 void FillInitialValuesFitParam( std::map<std::string,std::vector<double>> &mapInitValues );
 void FillEntryDataset( const std::list<std::string> &NPName, 
@@ -26,7 +26,8 @@ void FillEntryDataset( const std::list<std::string> &NPName,
 
 void FillDataset( const std::vector<std::string> &rootFilesName,
 		  const std::string &analysis,
-		  std::map<std::string,std::vector<RooDataSet*>> &mapSet
+		  std::map<std::string,std::vector<RooDataSet*>> &mapSet,
+		  std::list<std::string> &NPName
 		  );
 void GetCommonVars( ChrisLib::MapBranches &mapBranch, std::list<std::string> &commonVars );
 void CreateDataStoreList( std::list<DataStore> &dTList, const MapSet &mapSet );

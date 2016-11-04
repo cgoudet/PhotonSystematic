@@ -45,24 +45,24 @@ using std::list;
 using std::invalid_argument;
 using std::runtime_error;
 using std::max;
-
+using std::ostream_iterator;
 using namespace ChrisLib;
 
 void FitTree( const vector<string> &rootFilesName,  string outFileName, const string &inConfFileName ) {
 
   string analysis, fitMethod;
   //  vector<string> categoriesName;
-  vector<string> vectNPName;
+  vector<string> vectNPName, systOnly;
+  vector<unsigned> catOnly;
   unsigned int nBins;
   po::options_description configOptions("configOptions");
   configOptions.add_options()
-    //    ( "rootFileName", po::value< vector< string > >( &rootFilesName )->multitoken(), "ROOT Files containing the ntuples. Files must contains a TTree with the branches cited in branchName" )
-    //    ( "outFileName", po::value<string>( &outFileName )->default_value("/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/dum"), "Name of the ouput. The extension will be removed." )
-    //    ( "categoriesName", po::value<vector<string>>( &categoriesName )->multitoken(), "Names of the categories to consider for NP determination" )
     ( "nBins", po::value<unsigned int>( &nBins )->default_value(220), "Number of bins for binned fit." )
-    ( "NPName", po::value<vector<string>>( &vectNPName ), "Name of the branches to read" )
-    ( "analysis", po::value<string>( &analysis ), "Analysis which defines the event categorization : \nCouplings : Couplings\nDiffXS : Differential cross-section\nDiffXSPhi : Differential cross-section, phi categorisation" )
+    ( "analysis", po::value<string>( &analysis )->default_value("Couplings"), "Analysis which defines the event categorization : \nCouplings : Couplings\nDiffXS : Differential cross-section\nDiffXSPhi : Differential cross-section, phi categorisation" )
     ( "fitMethod", po::value<string>( &fitMethod )->default_value("fitAll_fitExtPOI"), "Name of the fitting method" )
+    ( "catOnly", po::value<vector<unsigned>>( &catOnly )->multitoken(), "" )
+    //    ( "systOnly", po::value<vector<string>>( &systOnly )->multitoken(), "" )
+    ( "NPName", po::value<vector<string>>( &vectNPName )->multitoken(), "" )
     ;
 
   po::variables_map vm;
@@ -75,39 +75,33 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
 
-  if ( !vectNPName.size() ) throw invalid_argument( "FitTree : No NP name provided." );
+  //  if ( !vectNPName.size() ) throw invalid_argument( "FitTree : No NP name provided." );
 
   MapSet mapSet;
   list<string> NPName;
   copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
-  FillDataset( rootFilesName, analysis, mapSet );
-  cout << "filled dataset" << endl;
-  for ( auto itVect = mapSet.begin(); itVect!=mapSet.end(); ++itVect ) {
-    cout << itVect->first << " " << itVect->second.size() << endl;
-    for ( auto itSet = itVect->second.begin(); itSet!= itVect->second.end(); ++itSet ) {
-      if ( (*itSet) ) (*itSet)->Print();
-    }
-  }
-  exit(0);
+  cout << "vectNPName : " << endl;
+  copy( vectNPName.begin(), vectNPName.end(), ostream_iterator<string>(cout,"\n"));
+  cout << "NPName : " << endl;
+  copy( NPName.begin(), NPName.end(), ostream_iterator<string>(cout,"\n"));
+  FillDataset( rootFilesName, analysis, mapSet, NPName );
+
   //Create a directory at the target to hold all results.
   outFileName = StripString( outFileName, 0, 1 );
   system( ("mkdir " + outFileName).c_str() );
   if ( outFileName.back() != '/' ) outFileName+="/";
-  cout << "created file" << endl;
 
   list<DataStore> dtList;
   CreateDataStoreList( dtList, mapSet );
-  cout << "createStorelist" << endl;
 
-  cout << "fitMethod : " << fitMethod << endl;
-  FitDatasets( fitMethod, dtList );
-  cout << "fitting" << endl;
-  exit(0);
+
+  FitDatasets( fitMethod, dtList, catOnly, vectNPName );
+
   vector<string> categoriesName;
   if ( analysis == "Couplings" ) categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( analysis == "DiffXS" ) categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( analysis == "DiffXSPhi" ) categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
-
+  if ( outFileName.back() =='/' ) outFileName += "SystVariation";
   PrintResult( dtList, outFileName, categoriesName );
 }
 
@@ -126,12 +120,12 @@ void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
 
 //=================================================
 void FillDataset( const vector<string> &rootFilesName,
-		  //		  const list<string> &NPName,
 		  const string &analysis,
-		  MapSet &mapSet
+		  MapSet &mapSet,
+		  list<string> &NPName
 		  ) {
   if ( !rootFilesName.size() ) throw invalid_argument( "FillDataset : No input files provided." );
-  //  if ( !NPName.size() ) throw invalid_argument( "FillDataset : No NP name provided." );
+
   const list<string>  allowedAnalyses = GetAllowedAnalyses();
   if ( find( allowedAnalyses.begin(), allowedAnalyses.end(), analysis ) == allowedAnalyses.end() ) throw invalid_argument( "FillDataset : Wrong analysis provided : " + analysis );
   string catVar = "catCoup";
@@ -157,7 +151,18 @@ void FillDataset( const vector<string> &rootFilesName,
   }
 
   MapBranches mapBranch;//Is used to easily link TTRee branches to a map
-  list<string> listBranches, NPName;
+  list<string> listBranches;
+
+  list<string> branchesToLink;
+  cout << "NPName : " << NPName.size() << endl;
+  if ( !NPName.empty() ) {
+    cout << "filling branchesToLink" <<endl;
+    list<list<string>> inCombine( 2, list<string>());
+    if ( find( NPName.begin(), NPName.end(), "" ) == NPName.end() ) NPName.insert(NPName.begin(), "" );
+    inCombine.front() = NPName;
+    inCombine.back() = GetAnalysisVariables();
+    branchesToLink = CombineNames( inCombine );
+  }
 
   for ( auto &vFileName : rootFilesName ) {
     cout << vFileName << endl;
@@ -166,14 +171,21 @@ void FillDataset( const vector<string> &rootFilesName,
 
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
 
-    mapBranch.LinkTreeBranches( inTree );
-
-    if ( vFileName == rootFilesName.front() ) {
+    mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
+    cout << "branchesToLink : " << endl;
+    copy( branchesToLink.begin(), branchesToLink.end(), ostream_iterator<string>(cout,"\n"));
+    list<string> listKeys;
+    mapBranch.GetKeys( listKeys );
+    cout << "listKeys : " << endl;
+    copy( listKeys.begin(), listKeys.end(), ostream_iterator<string>(cout,"\n"));
+    //    exit(0);
+    if ( NPName.empty() ) {
       GetCommonVars( mapBranch, listBranches );
       list<string> keys;
       mapBranch.GetKeys( keys );
       GetSystematics( keys, NPName );
     }
+
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
 
@@ -330,15 +342,15 @@ void FixParametersMethod ( unsigned int category, const string &fitMethod, const
 void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
-    cout << itData->GetName() << endl;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, fitMethod, nominalFit, mapVar );
     itData->Fit( pdf );
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
+    itData->Divide( *nominalFit[category] );
   }
 }
 //======================================================
-void FitDatasets( const string &fitMethod, list<DataStore> &dataStore ) {
+void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vector<unsigned> &catOnly, const vector<string> &systOnly ) {
 
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
@@ -355,6 +367,16 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore ) {
   //RooGaussian *pdf = new RooGaussian( "DSCB", "DSCB", mapVar["mass"], mapVar["mean"], mapVar["sigma"] );
   vector<DataStore*> nominalFit;
   FillNominalFit( dataStore, nominalFit, pdf, mapVar );
+
+  for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
+    if ( catOnly.size() && systOnly.size() && itData->GetName() != "" && 
+	 ( find( catOnly.begin(), catOnly.end(), itData->GetCategory() ) == catOnly.end() 
+	   || find( systOnly.begin(), systOnly.end(), itData->GetName() ) == systOnly.end() ) ) {
+      dataStore.erase( itData );
+      --itData; 
+    }
+  }
+
   FillFluctFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
 }
 
@@ -378,18 +400,18 @@ void FillArray( const DataStore &dataStore, const unsigned fluctLine, map<string
  }  
  //====================================================================
 void PrintResult( const list<DataStore> &lDataStore, const string &outFile, const vector<string> &categoriesName ) {
-  cout << "PrintResult" << endl;
 
    map<string,multi_array<double,2>> tables;
    list<string> variables = GetVariables();
    for ( auto itVar = variables.begin(); itVar!=variables.end(); ++itVar ) tables[*itVar] = multi_array<double,2>();
-   cout << "pushed table" << endl;
 
    map<string,unsigned> systIndex;
    int nCats=-1;
    vector<string> linesName;
    for ( auto itDataStore = lDataStore.begin(); itDataStore!=lDataStore.end(); ++itDataStore ) {
-     string systName = RemoveVar( itDataStore->GetName() );
+     string systName = RemoveSeparator( RemoveVar( itDataStore->GetName() ), "_" );
+     if ( systName == "" ) continue;
+     cout << "name : " << systName << endl;
      nCats = max( nCats, itDataStore->GetCategory() );
 
      auto posSyst = systIndex.find( systName );
@@ -403,16 +425,20 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
      FillArray( *itDataStore, index, tables );
    }
    if ( nCats < 0 ) throw runtime_error( "PrintResult : No valid categories." );
-   cout << "filled array" << endl;
-   exit(0);
-   
+   if ( !tables.begin()->second.size() ) throw runtime_error( "PrintResult : No systematic to print." );
+   //   if ( tables.begin()->second.size() % 2 ) throw runtime_error( "PrintResult : Odd number of columns." );
    vector<string> colsName={"systName"};
-
 
    list<list<string>> forInCombine;
    forInCombine.push_back( list<string>() );
-   copy( categoriesName.begin(), categoriesName.end(), back_inserter(forInCombine.front() ) );
    forInCombine.push_back( {"down", "up"} );
+
+   unsigned nCols = tables.begin()->second[0].size()/2;
+   if ( categoriesName.empty() || nCols !=categoriesName.size() ) 
+     for ( unsigned i=0; i<nCols; ++i ) forInCombine.front().push_back( string(TString::Format( "cat%d", i )) );
+   else copy( categoriesName.begin(), categoriesName.end(), back_inserter(forInCombine.front() ) );
+
+
    list<string> combined = CombineNames( forInCombine );
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
 
@@ -420,9 +446,9 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
   // // else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   // // else if ( doXS == 2 ) categoriesNames = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
 
-   for ( auto itVar = variables.begin(); itVar!=variables.end(); ++itVar ) {
-     string outName = StripString( outFile, 0, 1 ) + "_" + *itVar +".csv";
-     PrintArray( outName, tables[*itVar], linesName, colsName );
+   for ( auto itVar = tables.begin(); itVar!=tables.end(); ++itVar ) {
+     string outName = StripString( outFile, 0, 1 ) + "_" + itVar->first +".csv";
+     PrintArray( outName, itVar->second, linesName, colsName );
    }
  }
 
