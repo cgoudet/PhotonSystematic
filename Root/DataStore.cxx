@@ -8,6 +8,7 @@
 using std::cout;
 using std::endl;
 using std::string;
+using std::invalid_argument;
 using namespace ChrisLib;
 
 DataStore::DataStore( string name, int category, RooDataSet* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
@@ -26,6 +27,17 @@ void DataStore::FillDSCB( double mean, double sigma, double alphaHi, double alph
   m_alphaLow = alphaLow;
   m_nHi = nHi; 
   m_nLow = nLow;
+}
+
+//=========================
+void DataStore::ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alphaHi, RooRealVar* alphaLow, RooRealVar* nHi, RooRealVar* nLow ) const {
+  if ( !mean || !sigma || !alphaHi || !alphaLow || !nHi || !nLow ) throw invalid_argument( "DataStore::ResetDSCB : Null input pointer." );
+  mean->setVal( m_mean );
+  sigma->setVal( m_sigma );
+  alphaHi->setVal( m_alphaHi );
+  alphaLow->setVal( m_alphaLow );
+  nHi->setVal( m_nHi );
+  nLow->setVal( m_nLow );
 }
 
 //=========================

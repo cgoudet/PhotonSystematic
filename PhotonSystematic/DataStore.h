@@ -1,6 +1,7 @@
 #ifndef DATASTORE_H
 #define DATASTORE_H
 
+#include "RooRealVar.h"
 #include "RooDataSet.h"
 #include <string>
 
@@ -11,6 +12,7 @@ class DataStore {
   void Divide( const DataStore &dataStore );
   void Fit( RooAbsPdf *pdf );
   void FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow );
+  void ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alphaHi, RooRealVar* alphaLow, RooRealVar* nHi, RooRealVar* nLow ) const;
   void Print(); 
 
   double GetAlphaHi() const { return m_alphaHi; }

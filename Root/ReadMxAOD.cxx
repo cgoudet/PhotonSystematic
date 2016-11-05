@@ -86,7 +86,8 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   copy( containersName.begin(), containersName.end(), back_inserter( *inCombineNames.begin() ) );
   inCombineNames.push_back( unCommonVarsName );
 
-  list<string> outBranchesName = CombineNames( inCombineNames );
+  list<string> outBranchesName;
+  CombineNames( inCombineNames, outBranchesName );
   outBranchesName.insert( outBranchesName.begin(), commonVarsName.begin(), commonVarsName.end() );
   transform( outBranchesName.begin(), outBranchesName.end(), outBranchesName.begin(), repStr );
 

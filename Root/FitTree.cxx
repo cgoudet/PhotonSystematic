@@ -7,6 +7,7 @@
 #include "PlotFunctions/SideFunctionsTpp.h"
 #include "PhotonSystematic/DataStore.h"
 #include "PhotonSystematic/ReadMxAOD.h"
+#include "PlotFunctions/DrawPlot.h"
 
 #include "RooGaussian.h"
 #include "RooDataSet.h"
@@ -71,7 +72,6 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   po::notify( vm );
 
 
-
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
 
@@ -80,10 +80,6 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   MapSet mapSet;
   list<string> NPName;
   copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
-  cout << "vectNPName : " << endl;
-  copy( vectNPName.begin(), vectNPName.end(), ostream_iterator<string>(cout,"\n"));
-  cout << "NPName : " << endl;
-  copy( NPName.begin(), NPName.end(), ostream_iterator<string>(cout,"\n"));
   FillDataset( rootFilesName, analysis, mapSet, NPName );
 
   //Create a directory at the target to hold all results.
@@ -94,14 +90,17 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   list<DataStore> dtList;
   CreateDataStoreList( dtList, mapSet );
 
-
-  FitDatasets( fitMethod, dtList, catOnly, vectNPName );
+  MapPlot mapPlot;
+  FitDatasets( fitMethod, dtList, catOnly, vectNPName, mapPlot );
 
   vector<string> categoriesName;
   if ( analysis == "Couplings" ) categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( analysis == "DiffXS" ) categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( analysis == "DiffXSPhi" ) categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
   if ( outFileName.back() =='/' ) outFileName += "SystVariation";
+
+
+
   PrintResult( dtList, outFileName, categoriesName );
 }
 
@@ -147,21 +146,18 @@ void FillDataset( const vector<string> &rootFilesName,
     mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), 0 );
     observables.add( *mapCBParameters[*it] );
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
-    //    mapCBParameters[*it]->Print();
   }
 
   MapBranches mapBranch;//Is used to easily link TTRee branches to a map
-  list<string> listBranches;
+  list<string> commonVars;
 
   list<string> branchesToLink;
-  cout << "NPName : " << NPName.size() << endl;
   if ( !NPName.empty() ) {
-    cout << "filling branchesToLink" <<endl;
     list<list<string>> inCombine( 2, list<string>());
     if ( find( NPName.begin(), NPName.end(), "" ) == NPName.end() ) NPName.insert(NPName.begin(), "" );
     inCombine.front() = NPName;
-    inCombine.back() = GetAnalysisVariables();
-    branchesToLink = CombineNames( inCombine );
+    SelectVariablesAnalysis( analysis, inCombine.back() );
+    CombineNames( inCombine, branchesToLink );
   }
 
   for ( auto &vFileName : rootFilesName ) {
@@ -172,25 +168,17 @@ void FillDataset( const vector<string> &rootFilesName,
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
 
     mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
-    cout << "branchesToLink : " << endl;
-    copy( branchesToLink.begin(), branchesToLink.end(), ostream_iterator<string>(cout,"\n"));
-    list<string> listKeys;
-    mapBranch.GetKeys( listKeys );
-    cout << "listKeys : " << endl;
-    copy( listKeys.begin(), listKeys.end(), ostream_iterator<string>(cout,"\n"));
-    //    exit(0);
-    if ( NPName.empty() ) {
-      GetCommonVars( mapBranch, listBranches );
-      list<string> keys;
-      mapBranch.GetKeys( keys );
-      GetSystematics( keys, NPName );
+    if ( branchesToLink.empty() ) {//Optimize the branches to effectively link to gain reading time
+      SelectAnalysisBranches( analysis, mapBranch, branchesToLink, NPName );
+      mapBranch.ClearMaps();
+      mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
+      GetCommonVars( mapBranch, commonVars );
     }
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
-
       inTree->GetEntry( iEntry );
-      FillEntryDataset( NPName, mapBranch, mapSet, mapCBParameters, catVar, listBranches );
+      FillEntryDataset( NPName, mapBranch, mapSet, mapCBParameters, catVar, commonVars );
     }//end iEntry
     
     delete inTree;
@@ -223,6 +211,7 @@ void FillEntryDataset( const list<string> &NPName,
 		       const list<string> &commonVars
 		       ) {
 
+
   bool isCatVarCommon = find( commonVars.begin(), commonVars.end(), catVar ) != commonVars.end();
 
   RooRealVar *weightVar = 0;
@@ -238,7 +227,7 @@ void FillEntryDataset( const list<string> &NPName,
       if ( !itObs->second ) continue;
 
       string branchName = branchPrefix+string(itObs->second->GetTitle() );
-      itObs->second->setVal( mapBranch.GetVal(branchName) );
+      itObs->second->setVal( mapBranch.GetVal(branchName) );//Time constraining line
       setObservables.add( *itObs->second );
 
       if ( string(itObs->second->GetName() ) ==  "weight" ) {
@@ -251,26 +240,18 @@ void FillEntryDataset( const list<string> &NPName,
     //    if ( weightVar->getVal() == 0 ) continue;
     if ( observables["m_yy"]->getVal() < 0 ) continue;
     
-    //    cout << "passed null weight : " << weightVar->GetTitle() << " " << weightVar->getVal() << endl;
 
+
+    ExtendMapVect( mapSet, *itNPName, category );
     vector<RooDataSet*> *vectDataset = &mapSet[*itNPName];
-    //increase the size of the vector if needed
-    int datasetToAdd = category+1 - static_cast<int>(vectDataset->size());
-    if ( datasetToAdd > 0 ) {
-      list<RooDataSet*> dumList( datasetToAdd, 0 );
-      mapSet[*itNPName].insert( vectDataset->end(), dumList.begin(), dumList.end() );
-      vectDataset = &mapSet[*itNPName];
-    }
-
     if ( !(*vectDataset)[0] ) {
       string title = *itNPName+"_incl";
       (*vectDataset)[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
-      //      (*vectDataset)[0]->Print();
     }
+
     if ( !(*vectDataset)[category] ) {
       TString title = TString::Format( "%s_cat%d", itNPName->c_str(), category );
       (*vectDataset)[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
-      //     (*vectDataset)[category]->Print();
     }
 
     for ( int i = 0; i<category+1; i+=category ) (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
@@ -299,12 +280,9 @@ void CreateDataStoreList( list<DataStore> &dTList, const MapSet &mapSet ) {
 //====================================================================
 void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
-    cout << itData->GetName() << endl;
     if ( itData->GetName() != "" ) continue;
-
     itData->Fit( pdf );
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
-    cout << "filled" << endl;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
   while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
   nominalFit[category] = &(*itData);
@@ -350,7 +328,7 @@ void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const ve
   }
 }
 //======================================================
-void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vector<unsigned> &catOnly, const vector<string> &systOnly ) {
+void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vector<unsigned> &catOnly, const vector<string> &systOnly, MapPlot &mapPlot ) {
 
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
@@ -364,7 +342,7 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 0, 10 );
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
-  //RooGaussian *pdf = new RooGaussian( "DSCB", "DSCB", mapVar["mass"], mapVar["mean"], mapVar["sigma"] );
+
   vector<DataStore*> nominalFit;
   FillNominalFit( dataStore, nominalFit, pdf, mapVar );
 
@@ -378,6 +356,8 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   }
 
   FillFluctFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
+  //  PlotDists( mapPlot, dataStore, nominalFit, pdf, mapVar );
+  
 }
 
 //====================================================================
@@ -387,7 +367,7 @@ void FillArray( const DataStore &dataStore, const unsigned fluctLine, map<string
   bool isUp = 0;
   if ( name.find( "__1up" ) != string::npos ) isUp=1;
   
-  unsigned column = dataStore.GetCategory() + isUp;
+  unsigned column = 2*dataStore.GetCategory() + isUp;
   unsigned arrayLines = max( fluctLine+1, static_cast<unsigned>(array.begin()->second.size()) );
   unsigned arrayCols = column+1;
   if ( array.begin()->second.size() ) arrayCols = max( arrayCols, static_cast<unsigned>(array.begin()->second[0].size()) );
@@ -411,7 +391,6 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
    for ( auto itDataStore = lDataStore.begin(); itDataStore!=lDataStore.end(); ++itDataStore ) {
      string systName = RemoveSeparator( RemoveVar( itDataStore->GetName() ), "_" );
      if ( systName == "" ) continue;
-     cout << "name : " << systName << endl;
      nCats = max( nCats, itDataStore->GetCategory() );
 
      auto posSyst = systIndex.find( systName );
@@ -433,23 +412,27 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
    forInCombine.push_back( list<string>() );
    forInCombine.push_back( {"down", "up"} );
 
+   for ( auto itMap = tables.begin(); itMap!=tables.end(); ++itMap ) {
+     cout << itMap->first << " " << itMap->second.size() << " " << itMap->second[0].size() << endl;
+
+   }
+
    unsigned nCols = tables.begin()->second[0].size()/2;
    if ( categoriesName.empty() || nCols !=categoriesName.size() ) 
      for ( unsigned i=0; i<nCols; ++i ) forInCombine.front().push_back( string(TString::Format( "cat%d", i )) );
    else copy( categoriesName.begin(), categoriesName.end(), back_inserter(forInCombine.front() ) );
 
 
-   list<string> combined = CombineNames( forInCombine );
+   list<string> combined;
+   CombineNames( forInCombine, combined );
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
-
-  // // if ( doXS == 0 ) categoriesNames = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
-  // // else if ( doXS == 1 ) categoriesNames = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
-  // // else if ( doXS == 2 ) categoriesNames = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
 
    for ( auto itVar = tables.begin(); itVar!=tables.end(); ++itVar ) {
      string outName = StripString( outFile, 0, 1 ) + "_" + itVar->first +".csv";
      PrintArray( outName, itVar->second, linesName, colsName );
    }
+
+   //   DrawDists( mapPlot, dtList, outName, categoriesName );
  }
 
  //===========================================================
@@ -471,4 +454,119 @@ void GetCommonVars( MapBranches &mapBranch, list<string> &commonVars ) {
 }
 
  //===========================================================
+void SelectAnalysisBranches( const string &analysis, MapBranches &mapBranch, list<string> &branchesOfInterest, list<string> &NPName ) {
 
+  list<string> keys;
+  mapBranch.GetKeys( keys );
+
+  GetSystematics( keys, NPName );
+  list<list<string>> inCombine( 2, list<string>() );
+  inCombine.front() = NPName;
+  SelectVariablesAnalysis( analysis, inCombine.back() );
+
+  CombineNames( inCombine, branchesOfInterest );
+}
+
+ //===========================================================
+void SelectVariablesAnalysis( const string &analysis, list<string> &variables ) {
+  variables = { "m_yy" };
+  if ( analysis == "Couplings" ) {
+    variables.push_back( "weight" );
+    variables.push_back( "catCoup" );
+  }
+  else if ( analysis == "XS" ) {
+    variables.push_back( "weightXS" );
+    variables.push_back( "catXS" );
+  }    
+  else if ( analysis == "XSPhi" ) {
+    variables.push_back( "weightXS" );
+    variables.push_back( "catXSPhi" );
+  }    
+
+}
+
+//==========================================================
+void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
+
+  for ( list<DataStore>::const_iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
+    if ( itData->GetName() == "" ) continue;
+    if ( !itData->GetDataset() ) continue;
+    unsigned category = static_cast<unsigned>(itData->GetCategory());
+    string name = itData->GetName();
+    string systName = RemoveSeparator( RemoveVar( name ) );
+      
+    ExtendMapVect( mapPlot, systName, category );
+    vector<RooPlot*> *vectPlot = &mapPlot[systName];
+
+    if ( !(*vectPlot)[category] ) {
+      (*vectPlot)[category] = mapVar["m_yy"]->frame( 115, 135, 20 );
+      (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
+      (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
+
+      nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1) );
+      nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
+      pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
+    }
+    
+    string fluct = ExtractVariable( name );
+    bool isUpFluct = fluct == "1up";
+    int color = 1 + ( isUpFluct ? 2 : 1 );
+    itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
+    itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
+    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
+  }
+
+
+}
+//==========================================================
+void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, string outName, const vector<string> &categoriesName ) {
+
+  map<string,vector<TCanvas*>> mapCan;
+  double meanY=0.82;
+  double sigmaY=0.78;
+  double upX=0.65;
+  double downX=0.8;
+
+  for ( list<DataStore>::const_iterator itData = dataStores.begin(); itData!=dataStores.end(); ++itData ) {
+    string name = itData->GetName();
+    if ( name == "" ) continue;
+
+
+    unsigned category = static_cast<unsigned>(itData->GetCategory());
+    string systName = RemoveSeparator( RemoveVar( name ) );
+
+    const vector<RooPlot*> *vectPlot  = &mapPlot.at(systName);
+
+    ExtendMapVect( mapCan, systName, category );
+    vector<TCanvas*> *vectCan = &mapCan[systName];
+    if ( !(*vectCan)[category] ) {
+      (*vectCan)[category] = new TCanvas( TString::Format( "%s_%d", systName.c_str(), category ), "" );
+      (*vectPlot)[category]->SetMaximum( (*vectPlot)[category]->GetMaximum()*1.3 );     
+      (*vectPlot)[category]->Draw();
+
+      ATLASLabel( 0.16, 0.9, "Work In Progress", 1, 0.05 );
+      myText( 0.16, 0.85, 1, "Simulation", 0.04 );
+      //myText( 0.16, 0.8, 1, "#sqrt{s}=13TeV, L=1.00 fb^{-1}", 0.04 );
+      myText( 0.16, 0.6, 1, "All processes"  );
+      myText( 0.16, 0.64, 1, categoriesName[category].c_str() );
+      myLineText( 0.16, 0.56, 1, 1, "nominal", 0.035, 2 );
+      myLineText( 0.16, 0.52, 3, 1, "up", 0.035, 2 );
+      myLineText( 0.16, 0.48, 2, 1, "down", 0.035, 2 );
+      myText( upX, 0.86, 1, "up"  );
+      myText( downX, 0.86, 1, "down"  );
+    }
+
+    bool isUpFluct = ExtractVariable( name ) == "1up" ;
+    if ( itData->GetMean() ) {
+      if ( isUpFluct ) myText( 0.5, meanY, 1, "mean" );
+      myText( isUpFluct ? upX : downX, meanY, 1, TString::Format( "%2.2f", itData->GetMean()*100. ) );
+    }
+    
+    if ( itData->GetSigma() ) {
+      if ( isUpFluct ) myText( 0.5, sigmaY, 1, "sigma" );
+      myText( isUpFluct ? upX : downX, sigmaY, 1, TString::Format( "%2.2f", itData->GetSigma()*100. ) );
+    }
+    
+    
+  }
+}
