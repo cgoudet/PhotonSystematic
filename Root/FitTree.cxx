@@ -8,6 +8,7 @@
 #include "PhotonSystematic/DataStore.h"
 #include "PhotonSystematic/ReadMxAOD.h"
 #include "PlotFunctions/DrawPlot.h"
+#include "PlotFunctions/Foncteurs.h"
 
 #include "RooGaussian.h"
 #include "RooDataSet.h"
@@ -102,6 +103,7 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
 
 
   PrintResult( dtList, outFileName, categoriesName );
+  DrawDists( mapPlot, dtList, outFileName, categoriesName );
 }
 
 //=================================================
@@ -141,10 +143,11 @@ void FillDataset( const vector<string> &rootFilesName,
   //Create roofit parameters to fill datasets
   const vector<string> CBVarName = { "m_yy", "weight" };  
   map<string, RooRealVar*> mapCBParameters;
-  RooArgSet observables;
+  //  RooArgSet observables;
   for ( auto it = CBVarName.begin(); it!=CBVarName.end(); ++it ) {
     mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), 0 );
-    observables.add( *mapCBParameters[*it] );
+    if ( *it == "m_yy" ) mapCBParameters[*it]->setRange( 105, 160 );
+    //    observables.add( *mapCBParameters[*it] );
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
   }
 
@@ -227,7 +230,7 @@ void FillEntryDataset( const list<string> &NPName,
       if ( !itObs->second ) continue;
 
       string branchName = branchPrefix+string(itObs->second->GetTitle() );
-      itObs->second->setVal( mapBranch.GetVal(branchName) );//Time constraining line
+      itObs->second->setVal( mapBranch.GetVal(branchName) );
       setObservables.add( *itObs->second );
 
       if ( string(itObs->second->GetName() ) ==  "weight" ) {
@@ -243,7 +246,7 @@ void FillEntryDataset( const list<string> &NPName,
 
 
     ExtendMapVect( mapSet, *itNPName, category );
-    vector<RooDataSet*> *vectDataset = &mapSet[*itNPName];
+    vector<RooAbsData*> *vectDataset = &mapSet[*itNPName];
     if ( !(*vectDataset)[0] ) {
       string title = *itNPName+"_incl";
       (*vectDataset)[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
@@ -254,7 +257,15 @@ void FillEntryDataset( const list<string> &NPName,
       (*vectDataset)[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
     }
 
-    for ( int i = 0; i<category+1; i+=category ) (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
+    for ( int i = 0; i<category+1; i+=category ) {
+      (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
+      // if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000) {
+      // 	RooAbsData * oldSet = (*vectDataset)[i];
+      // 	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet );
+      // 	delete oldSet;
+      // 	(*vectDataset)[i] = histSet;
+      // }
+    }
 
   }//end itNPName
 }
@@ -279,6 +290,7 @@ void CreateDataStoreList( list<DataStore> &dTList, const MapSet &mapSet ) {
 }
 //====================================================================
 void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
+  cout << "nominal" << endl;
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
     itData->Fit( pdf );
@@ -286,45 +298,29 @@ void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit,
     unsigned category = static_cast<unsigned>(itData->GetCategory());
   while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
   nominalFit[category] = &(*itData);
+  nominalFit[category]->Print();
   }
 }
 //======================================================
 void FixParametersMethod ( unsigned int category, const string &fitMethod, const vector<DataStore*> &nominalFit, map<string,RooRealVar*> &mapVar ) {
   if ( nominalFit.size() <= category || !nominalFit[category] ) return;
-  if ( fitMethod == "fitAll_fitExtPOI" ) {
-    mapVar["mean"]->setConstant(0);
-    mapVar["mean"]->setVal( nominalFit[category]->GetMean() );
-  }
+  nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
 
-  if ( fitMethod == "fitAll_fitExtPOI" ) {
-    mapVar["sigma"]->setConstant(0);
-    mapVar["sigma"]->setVal( nominalFit[category]->GetSigma() );
-  }
+  for ( auto itVar = mapVar.begin(); itVar!=mapVar.end(); ++itVar ) itVar->second->setConstant(1);
 
-  if ( fitMethod == "fitAll_fitExtPOI" ) {
-    mapVar["alphaHi"]->setConstant(1);
-    mapVar["alphaHi"]->setVal( nominalFit[category]->GetAlphaHi() );
-    mapVar["alphaLow"]->setConstant(1);
-    mapVar["alphaLow"]->setVal( nominalFit[category]->GetAlphaLow() );
-  }
-
-  if ( fitMethod == "fitAll_fitExtPOI" ) {
-    mapVar["nHi"]->setConstant(1);
-    mapVar["nHi"]->setVal( nominalFit[category]->GetNHi() );
-    mapVar["nLow"]->setConstant(1);
-    mapVar["nLow"]->setVal( nominalFit[category]->GetNLow() );
-  }
+  if ( fitMethod == "fitAll_fitExtPOI" ) mapVar["mean"]->setConstant(0);
+  if ( fitMethod == "fitAll_fitExtPOI" ) mapVar["sigma"]->setConstant(0);
 
 }
 //======================================================
 void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
+  cout << "fluctuation" << endl;
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, fitMethod, nominalFit, mapVar );
     itData->Fit( pdf );
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
-    itData->Divide( *nominalFit[category] );
   }
 }
 //======================================================
@@ -334,12 +330,13 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
   map<string,RooRealVar*> mapVar;
   mapVar["mass"]= new RooRealVar( "m_yy", "mass", 105, 160);
+  mapVar["mass"]->setBins(220);
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
-  mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 0, 10 );
-  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0, 10 );
-  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 0, 10 );
-  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 0, 10 );
-  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 0, 10 );
+  mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 0.1, 10 );
+  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0.1, 20 );
+  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 0.1, 20 );
+  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 0.1, 20 );
+  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 0.1, 20 );
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
 
@@ -356,8 +353,13 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   }
 
   FillFluctFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
-  //  PlotDists( mapPlot, dataStore, nominalFit, pdf, mapVar );
+  PlotDists( mapPlot, dataStore, nominalFit, pdf, mapVar );
   
+  for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
+    if ( itData->GetName() == "" ) continue;
+    unsigned category = static_cast<unsigned>(itData->GetCategory());
+    itData->Divide( *nominalFit[category] );
+  }
 }
 
 //====================================================================
@@ -412,11 +414,6 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
    forInCombine.push_back( list<string>() );
    forInCombine.push_back( {"down", "up"} );
 
-   for ( auto itMap = tables.begin(); itMap!=tables.end(); ++itMap ) {
-     cout << itMap->first << " " << itMap->second.size() << " " << itMap->second[0].size() << endl;
-
-   }
-
    unsigned nCols = tables.begin()->second[0].size()/2;
    if ( categoriesName.empty() || nCols !=categoriesName.size() ) 
      for ( unsigned i=0; i<nCols; ++i ) forInCombine.front().push_back( string(TString::Format( "cat%d", i )) );
@@ -432,7 +429,7 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
      PrintArray( outName, itVar->second, linesName, colsName );
    }
 
-   //   DrawDists( mapPlot, dtList, outName, categoriesName );
+   
  }
 
  //===========================================================
@@ -497,21 +494,22 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
       
     ExtendMapVect( mapPlot, systName, category );
     vector<RooPlot*> *vectPlot = &mapPlot[systName];
-
     if ( !(*vectPlot)[category] ) {
-      (*vectPlot)[category] = mapVar["m_yy"]->frame( 115, 135, 20 );
+      (*vectPlot)[category] = mapVar["mass"]->frame( 115, 135, 20 );
+      (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
-
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1) );
+      nominalFit[category]->GetDataset()->Print();
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
     }
-    
+   
     string fluct = ExtractVariable( name );
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
+    itData->GetDataset()->Print();
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
     pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
   }
@@ -541,6 +539,8 @@ void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, strin
     vector<TCanvas*> *vectCan = &mapCan[systName];
     if ( !(*vectCan)[category] ) {
       (*vectCan)[category] = new TCanvas( TString::Format( "%s_%d", systName.c_str(), category ), "" );
+      (*vectCan)[category]->SetTopMargin(0.01);
+      (*vectCan)[category]->SetRightMargin(0.01);
       (*vectPlot)[category]->SetMaximum( (*vectPlot)[category]->GetMaximum()*1.3 );     
       (*vectPlot)[category]->Draw();
 
@@ -555,6 +555,7 @@ void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, strin
       myText( upX, 0.86, 1, "up"  );
       myText( downX, 0.86, 1, "down"  );
     }
+    else (*vectCan)[category]->cd();
 
     bool isUpFluct = ExtractVariable( name ) == "1up" ;
     if ( itData->GetMean() ) {
@@ -566,7 +567,27 @@ void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, strin
       if ( isUpFluct ) myText( 0.5, sigmaY, 1, "sigma" );
       myText( isUpFluct ? upX : downX, sigmaY, 1, TString::Format( "%2.2f", itData->GetSigma()*100. ) );
     }
-    
-    
   }
+
+  ReplaceString repStr( "_", "\\_" );
+  string texName = outName+"_Plots.tex";
+  fstream stream( texName, fstream::out );
+  WriteLatexHeader( stream, "Photon Calibration Systematics" );
+  for ( auto itVectCan = mapCan.begin(); itVectCan!=mapCan.end(); ++itVectCan ) {
+    vector<string> plots;
+    stream << "\\section{" << repStr(itVectCan->first) << "}\n";
+    for ( auto itCan = itVectCan->second.begin(); itCan!=itVectCan->second.end(); ++itCan ) {
+      string name = outName + "_" + string((*itCan)->GetName()) + ".pdf";
+      (*itCan)->SaveAs( name.c_str());
+      plots.push_back(name);
+      WriteLatexMinipage( stream, plots, 2 );
+    }
+
+  }
+  stream << "\\end{document}\n";
+  stream.close();
+  string commandLine = "pdflatex -interaction=batchmode " + texName + " -output-directory " + outName;
+  system( commandLine.c_str() );
+  system( commandLine.c_str() );
 }
+//==========================================================

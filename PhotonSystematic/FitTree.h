@@ -13,7 +13,7 @@
 #include <list>
 
 
-typedef std::map<std::string,std::vector<RooDataSet*>> MapSet;
+typedef std::map<std::string,std::vector<RooAbsData*>> MapSet;
 typedef std::map<std::string,std::vector<RooPlot*>> MapPlot;
 
 /**\brief Fit the dataset of systematic variation and fill mapPlot with corresponding RooPlots
@@ -39,7 +39,7 @@ void FillEntryDataset( const std::list<std::string> &NPName,
 
 void FillDataset( const std::vector<std::string> &rootFilesName,
 		  const std::string &analysis,
-		  std::map<std::string,std::vector<RooDataSet*>> &mapSet,
+		  MapSet &mapSet,
 		  std::list<std::string> &NPName
 		  );
 

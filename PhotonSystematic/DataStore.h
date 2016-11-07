@@ -7,7 +7,7 @@
 
 class DataStore {
  public :
-  DataStore( std::string name="", int category=-1, RooDataSet* dataset =0 );
+  DataStore( std::string name="", int category=-1, RooAbsData* dataset =0 );
 
   void Divide( const DataStore &dataStore );
   void Fit( RooAbsPdf *pdf );
@@ -18,7 +18,7 @@ class DataStore {
   double GetAlphaHi() const { return m_alphaHi; }
   double GetAlphaLow() const { return m_alphaLow; }
   int GetCategory() const { return m_category;}
-  RooDataSet *GetDataset() const { return m_dataset; }
+  RooAbsData *GetDataset() const { return m_dataset; }
   double GetMean() const { return m_mean; }
   std::string GetName() const { return m_name; }
   double GetNHi() const { return m_nHi; }
@@ -26,7 +26,7 @@ class DataStore {
   double GetSigma() const { return m_sigma; }
 
  private :
-  RooDataSet* m_dataset;
+  RooAbsData* m_dataset;
   int m_category;
   std::string m_name;
 

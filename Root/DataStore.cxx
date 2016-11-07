@@ -11,13 +11,19 @@ using std::string;
 using std::invalid_argument;
 using namespace ChrisLib;
 
-DataStore::DataStore( string name, int category, RooDataSet* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
+DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
 //=========================
 
 void DataStore::Fit( RooAbsPdf *pdf ) {
   if ( !m_dataset ) return ;
+  m_dataset->Print();
   if ( m_dataset->numEntries() < 10 ) FillDSCB( -99., -99., -99., -99., -99., -99. );
-  else FitData( m_dataset, pdf, -1 );
+  else {
+    FitData( m_dataset, pdf, 0 ); 
+    // pdf->fitTo( *static_cast<RooDataSet*>(m_dataset)->binnedClone() );
+    // if ( string(m_dataset->ClassName() ) == "RooDataSet" ) FitData( static_cast<RooDataSet*>(m_dataset)->binnedClone(), pdf, -1 );
+    // else FitData( m_dataset, pdf, 1 ); 
+  }
 }
 //=========================
 void DataStore::FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow ) {
