@@ -33,8 +33,10 @@ namespace po = boost::program_options;
 #include <string>
 #include <fstream>
 #include <math.h>
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 using namespace ChrisLib;
 
 //#################
@@ -61,10 +63,10 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   if (vm.count("help")) {cout << desc; return 0;}
   //=============================================
   if ( !xAOD::Init().isSuccess() ) throw runtime_error( "xAOD Init Failed" );
-  cout << "init" << endl;
+
   bool isOutputDirectory = ( outDirectory.substr(outDirectory.find_last_of( "." )) == ".root" );
   if ( !isOutputDirectory && outDirectory.back() != '/' ) outDirectory+="/";
-  cout << "repStr" << endl;
+
   ReplaceString repStr("HGamEventInfo_");
   /*Create the names of all the required branches
     For the input variables one must combine the name of the container with the name of the variables of interest
@@ -78,7 +80,6 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   set_difference( varsName.begin(), varsName.end(), commonVarsName.begin(), commonVarsName.end(), back_inserter(unCommonVarsName) );
 
   //Stores the prefix output for a given container
-  cout << "branchMatching" << endl;
   map<string,string> branchMatching;
   for ( auto itName = containersName.begin(); itName!=containersName.end(); ++itName ) 
     branchMatching[*itName] = repStr(*itName);
@@ -87,7 +88,6 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   copy( containersName.begin(), containersName.end(), back_inserter( *inCombineNames.begin() ) );
   inCombineNames.push_back( unCommonVarsName );
 
-  cout << "outBranhesName" << endl;
   list<string> outBranchesName;
   CombineNames( inCombineNames, outBranchesName );
   outBranchesName.insert( outBranchesName.begin(), commonVarsName.begin(), commonVarsName.end() );
@@ -105,6 +105,10 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
 
   vector<string> allVarsName;
   copy( duplicateVarsName.begin(), duplicateVarsName.end(), back_inserter(allVarsName) );
+
+  //Setting m_yy as first variable for optimization
+  vector<string>::iterator mGamPos = find( allVarsName.begin(), allVarsName.end(), "m_yy" );
+  swap( *mGamPos, *allVarsName.begin() );
 
   map<string,double> defaultVarValues;
   defaultVarValues["catCoup"]=-1;
@@ -152,12 +156,12 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
     int nentries = tevent->getEntries();
     if ( debug == 2 ) nentries = 100;
     for (int i_event = 0 ; i_event < nentries ; i_event++) {
-      
+      //      high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
       if ( !outTree ) {
   	outTree = new TTree( "outTree", "outTree" );
   	outTree->SetDirectory(0);
   	for ( auto itVarName = outBranchesName.begin(); itVarName!=outBranchesName.end(); ++itVarName ) {
-	  //	  	  cout << "branching : " << *itVarName << endl;
 	  mapVal[*itVarName] = -99;
 	  outTree->Branch(itVarName->c_str(), &mapVal[*itVarName] );
 	}
@@ -184,25 +188,39 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
 
 	list<string> outName;
 	
+	//nominal case with empty container name
 	if ( *itName == repStr( *itName ) ) copy( allVarsName.begin(), allVarsName.end(), back_inserter(outName) );
 	else {
 	  Prefix outPrefix( repStr( *itName )+"_" );
 	  transform( allVarsName.begin(), allVarsName.end(), back_inserter(outName), outPrefix );
 	}
 
-	for ( auto itBranch = outName.begin(); itBranch!=outName.end(); ++itBranch ) {
 
-	  bool isCommon = find( commonVarsName.begin(), commonVarsName.end(), ExtractVariable(*itBranch) ) != commonVarsName.end();
-	  bool fillMapAnswer = FillMapFromEventInfo( *itBranch, mapVal, currentEventInfo, commonWeight, isCommon );
-	  keepEvent = fillMapAnswer || keepEvent;
+	bool isGoodEvent=true;
+	for ( auto itBranch = outName.begin(); itBranch!=outName.end(); ++itBranch ) {
+	  
+	  if ( !isGoodEvent ) { 
+	    mapVal[*itBranch] = -99;
+	  }
+	  else {
+	    bool isCommon = find( commonVarsName.begin(), commonVarsName.end(), ExtractVariable(*itBranch) ) != commonVarsName.end();
+	    bool fillMapAnswer = FillMapFromEventInfo( *itBranch, mapVal, currentEventInfo, commonWeight, isCommon );
+	    keepEvent = fillMapAnswer || keepEvent;
+	    if ( itBranch->find( "m_yy" ) != string::npos && mapVal[*itBranch] < 0 ) isGoodEvent = false;
+	  }
 	}
 		
       }//end vName
+
 
       if ( keepEvent ) { 
   	outTree->Fill();
 	totEntry++;
       }
+
+      // high_resolution_clock::time_point t2 = high_resolution_clock::now();
+      // auto duration = duration_cast<microseconds>( t2 - t1 ).count();
+      // if (totEntry==1) cout << "keptEventTime : " << duration << endl;
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
       if ( ( totEntry%100000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
