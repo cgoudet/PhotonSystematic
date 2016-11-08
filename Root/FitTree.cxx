@@ -76,8 +76,6 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
 
-  //  if ( !vectNPName.size() ) throw invalid_argument( "FitTree : No NP name provided." );
-
   MapSet mapSet;
   list<string> NPName;
   copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
@@ -146,7 +144,6 @@ void FillDataset( const vector<string> &rootFilesName,
   //  RooArgSet observables;
   for ( auto it = CBVarName.begin(); it!=CBVarName.end(); ++it ) {
     mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), 0 );
-    if ( *it == "m_yy" ) mapCBParameters[*it]->setRange( 105, 160 );
     //    observables.add( *mapCBParameters[*it] );
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
   }
@@ -290,7 +287,6 @@ void CreateDataStoreList( list<DataStore> &dTList, const MapSet &mapSet ) {
 }
 //====================================================================
 void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
-  cout << "nominal" << endl;
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
     itData->Fit( pdf );
@@ -499,7 +495,7 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
       (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
-      nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1) );
+      nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
       nominalFit[category]->GetDataset()->Print();
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
@@ -508,7 +504,7 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     string fluct = ExtractVariable( name );
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
-    itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
+    itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
     itData->GetDataset()->Print();
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
     pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );

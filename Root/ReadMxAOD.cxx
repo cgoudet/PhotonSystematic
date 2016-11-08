@@ -61,10 +61,10 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   if (vm.count("help")) {cout << desc; return 0;}
   //=============================================
   if ( !xAOD::Init().isSuccess() ) throw runtime_error( "xAOD Init Failed" );
-
+  cout << "init" << endl;
   bool isOutputDirectory = ( outDirectory.substr(outDirectory.find_last_of( "." )) == ".root" );
   if ( !isOutputDirectory && outDirectory.back() != '/' ) outDirectory+="/";
-
+  cout << "repStr" << endl;
   ReplaceString repStr("HGamEventInfo_");
   /*Create the names of all the required branches
     For the input variables one must combine the name of the container with the name of the variables of interest
@@ -78,6 +78,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   set_difference( varsName.begin(), varsName.end(), commonVarsName.begin(), commonVarsName.end(), back_inserter(unCommonVarsName) );
 
   //Stores the prefix output for a given container
+  cout << "branchMatching" << endl;
   map<string,string> branchMatching;
   for ( auto itName = containersName.begin(); itName!=containersName.end(); ++itName ) 
     branchMatching[*itName] = repStr(*itName);
@@ -86,6 +87,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   copy( containersName.begin(), containersName.end(), back_inserter( *inCombineNames.begin() ) );
   inCombineNames.push_back( unCommonVarsName );
 
+  cout << "outBranhesName" << endl;
   list<string> outBranchesName;
   CombineNames( inCombineNames, outBranchesName );
   outBranchesName.insert( outBranchesName.begin(), commonVarsName.begin(), commonVarsName.end() );
@@ -174,11 +176,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
 
       map<string,double> valVarsConstCheck;
       bool keepEvent = false;
-      // cout << "containers" << endl;
-      // copy( containersName.begin(), containersName.end(), ostream_iterator<string>(cout,"\n"));
-      // exit(0);
       for ( auto itName = containersName.begin(); itName != containersName.end(); ++itName ) {
-	//	cout << "contName:" << *itName << endl;
 	const xAOD::EventInfo* currentEventInfo = mapEvent[*itName];
 
   	if ( !tevent->retrieve( currentEventInfo, itName->c_str() ).isSuccess() ) throw runtime_error( "xAOD retrieve failed : " + *itName );
@@ -192,29 +190,21 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
 	  transform( allVarsName.begin(), allVarsName.end(), back_inserter(outName), outPrefix );
 	}
 
-	// cout << "outName :" << outName.size() << endl;
-	// copy( outName.begin(), outName.end(), ostream_iterator<string>(cout,"\n"));
-	// cout << endl;
 	for ( auto itBranch = outName.begin(); itBranch!=outName.end(); ++itBranch ) {
-	  //	  cout << "itName :" << *itName << " " << *itBranch << endl;
+
 	  bool isCommon = find( commonVarsName.begin(), commonVarsName.end(), ExtractVariable(*itBranch) ) != commonVarsName.end();
-	  keepEvent = keepEvent || FillMapFromEventInfo( *itBranch, mapVal, currentEventInfo, commonWeight, isCommon );
+	  bool fillMapAnswer = FillMapFromEventInfo( *itBranch, mapVal, currentEventInfo, commonWeight, isCommon );
+	  keepEvent = fillMapAnswer || keepEvent;
 	}
 		
       }//end vName
 
-
       if ( keepEvent ) { 
   	outTree->Fill();
 	totEntry++;
-	// for ( auto vName : mapVal ) {
-	//   cout << vName.first << ":" << vName.second << endl;
-	// }
-	// exit(0);
       }
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
-      
       if ( ( totEntry%100000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
   	string dumName = isOutputDirectory ? outDirectory : outDirectory + StripString(*itFileName, 1, 0);
   	cout << "saving : " << dumName << endl;
@@ -273,20 +263,20 @@ bool FillMapFromEventInfo( const string &outName,
 			   ) {
 
   string varName = ExtractVariable( outName );  
-  double currentVal = -99;
- 
+
+
   //For general case, the variable does not give an information on the selection cut so in case of a OR return 0.
   //Only weight varaibles can eventually return true;
   bool keepEvent = 0;
-  if ( varName == "weightXS" ) currentVal = static_cast<bool>(eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weight" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
+  double currentVal = -99;
+
+  if ( varName == "weightXS" ) //currentVal = static_cast<bool>(eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weight" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
+    currentVal = eventInfo->auxdata<float>( "weight" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
   else if ( varName == "weight" ) {
-    //    cout << "justWeight : " << eventInfo->auxdata< char >( "isPassed" ) << " "<< static_cast<int>( eventInfo->auxdata< char >( "isPassed" )) <<  " " << eventInfo->auxdata<float>( "weightCatCoup_dev" ) << " " << eventInfo->auxdata<float>( "crossSectionBRfilterEff" ) << " " << commonWeight << endl;
-    currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
-}
-  else if ( varName == "m_yy" ) { 
-    currentVal = eventInfo->auxdata<float>( "m_yy" );
-    //    cout << outName << " " << currentVal << endl;
+    //    currentVal = static_cast<bool>( eventInfo->auxdata< char >( "isPassed" ))*eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
+    currentVal = eventInfo->auxdata<float>( "weightCatCoup_dev" )*eventInfo->auxdata<float>( "crossSectionBRfilterEff" )*commonWeight;
   }
+  else if ( varName == "m_yy" ) currentVal = eventInfo->auxdata<float>( "m_yy" );
   else if ( varName == "catCoup" ) {
     currentVal = eventInfo->auxdata<int>( "catCoup_dev" );
     if ( currentVal == -1 ) currentVal = -99;
@@ -317,8 +307,9 @@ bool FillMapFromEventInfo( const string &outName,
     mapVal[outName] = currentVal;
   }
 
-
- if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
+  //  if ( varName.find( "weight" ) != string::npos ) cout << outName << " " << currentVal << endl;
+  // if ( varName.find( "weight" ) != string::npos && currentVal!=0 ) keepEvent=1;
+  if ( varName.find( "m_yy" ) != string::npos && currentVal>0 ) keepEvent=1;
 //     if ( varName.find("weight")!=string::npos )  cout << outName << " " << isCommon << " " << currentVal << endl;
   return keepEvent;
 }
