@@ -141,11 +141,13 @@ void FillDataset( const vector<string> &rootFilesName,
   //Create roofit parameters to fill datasets
   const vector<string> CBVarName = { "m_yy", "weight" };  
   map<string, RooRealVar*> mapCBParameters;
-  //  RooArgSet observables;
   for ( auto it = CBVarName.begin(); it!=CBVarName.end(); ++it ) {
     mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), 0 );
-    //    observables.add( *mapCBParameters[*it] );
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
+    else {
+      mapCBParameters[*it]->setRange(-100, 160);
+      mapCBParameters[*it]->setBins( 260*4 );
+    }
   }
 
   MapBranches mapBranch;//Is used to easily link TTRee branches to a map
@@ -256,12 +258,15 @@ void FillEntryDataset( const list<string> &NPName,
 
     for ( int i = 0; i<category+1; i+=category ) {
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
-      // if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000) {
-      // 	RooAbsData * oldSet = (*vectDataset)[i];
-      // 	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet );
-      // 	delete oldSet;
-      // 	(*vectDataset)[i] = histSet;
-      // }
+      if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000) {
+      	RooAbsData * oldSet = (*vectDataset)[i];
+      	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet, 1 );
+      	delete oldSet;
+      	(*vectDataset)[i] = histSet;
+	(*vectDataset)[i]->Print();
+	//	exit(0);
+
+      }
     }
 
   }//end itNPName
@@ -578,8 +583,8 @@ void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, strin
       plots.push_back(name);
       WriteLatexMinipage( stream, plots, 2 );
     }
-
   }
+
   stream << "\\end{document}\n";
   stream.close();
   string commandLine = "pdflatex -interaction=batchmode " + texName + " -output-directory " + outName;
