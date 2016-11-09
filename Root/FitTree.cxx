@@ -588,6 +588,7 @@ void DrawDists( const MapPlot &mapPlot,
     vector<string> plots;
     stream << "\\section{" << repStr(itVectCan->first) << "}\n";
     for ( auto itCan = itVectCan->second.begin(); itCan!=itVectCan->second.end(); ++itCan ) {
+      if ( ! (*itCan) ) continue;
       string name = outName + "_" + string((*itCan)->GetName()) + ".pdf";
       (*itCan)->SaveAs( name.c_str());
       plots.push_back(name);
