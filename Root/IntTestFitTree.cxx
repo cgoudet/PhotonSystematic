@@ -51,7 +51,8 @@ bool TestFitTree() {
 
   string outFileName = "/sps/atlas/c/cgoudet/Plots/TestPrintFit";
   vector<string> categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};;
-  PrintResult( dtList, outFileName, categoriesName );
+  list<string> tablesName;
+  PrintResult( dtList, outFileName, categoriesName, tablesName );
   return true;
 }
 

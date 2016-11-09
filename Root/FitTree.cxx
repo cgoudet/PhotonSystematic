@@ -34,6 +34,8 @@ using boost::extents;
 #include <vector>
 #include <fstream>
 #include <map>
+#include <bitset>
+
 using std::cout;
 using std::endl;
 using std::vector;
@@ -48,6 +50,7 @@ using std::invalid_argument;
 using std::runtime_error;
 using std::max;
 using std::ostream_iterator;
+using std::bitset;
 using namespace ChrisLib;
 
 void FitTree( const vector<string> &rootFilesName,  string outFileName, const string &inConfFileName ) {
@@ -99,9 +102,9 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   if ( outFileName.back() =='/' ) outFileName += "SystVariation";
 
 
-
-  PrintResult( dtList, outFileName, categoriesName );
-  DrawDists( mapPlot, dtList, outFileName, categoriesName );
+  list<string> tablesName;
+  PrintResult( dtList, outFileName, categoriesName, tablesName );
+  DrawDists( mapPlot, dtList, outFileName, categoriesName, tablesName );
 }
 
 //=================================================
@@ -263,9 +266,6 @@ void FillEntryDataset( const list<string> &NPName,
       	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet, 1 );
       	delete oldSet;
       	(*vectDataset)[i] = histSet;
-	(*vectDataset)[i]->Print();
-	//	exit(0);
-
       }
     }
 
@@ -299,19 +299,23 @@ void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit,
     unsigned category = static_cast<unsigned>(itData->GetCategory());
   while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
   nominalFit[category] = &(*itData);
-  nominalFit[category]->Print();
   }
 }
 //======================================================
-void FixParametersMethod ( unsigned int category, const string &fitMethod, const vector<DataStore*> &nominalFit, map<string,RooRealVar*> &mapVar ) {
+void FixParametersMethod ( unsigned int category, const string &fitMethod, const vector<DataStore*> &nominalFit, map<string,RooRealVar*> &mapVar, const string &NPName ) {
   if ( nominalFit.size() <= category || !nominalFit[category] ) return;
   nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
 
   for ( auto itVar = mapVar.begin(); itVar!=mapVar.end(); ++itVar ) itVar->second->setConstant(1);
+  bitset<2> setConstant;
+  if ( fitMethod.find( "fitExtPOI" ) != string::npos ) setConstant = bitset<2>(string("11"));
+  if ( fitMethod.find( "fitPOI" ) != string::npos ) {
+    if ( NPName.find("RESOLUTION") != string::npos ) setConstant.set(1);
+    else if ( NPName.find("SCALE") != string::npos ) setConstant.set(0);
+  }
 
-  if ( fitMethod == "fitAll_fitExtPOI" ) mapVar["mean"]->setConstant(0);
-  if ( fitMethod == "fitAll_fitExtPOI" ) mapVar["sigma"]->setConstant(0);
-
+  if ( setConstant.test(0) ) mapVar["mean"]->setConstant(0);
+  if ( setConstant.test(1) ) mapVar["sigma"]->setConstant(0);
 }
 //======================================================
 void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
@@ -319,7 +323,7 @@ void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const ve
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
-    FixParametersMethod( category, fitMethod, nominalFit, mapVar );
+    FixParametersMethod( category, fitMethod, nominalFit, mapVar, itData->GetName() );
     itData->Fit( pdf );
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
   }
@@ -331,7 +335,9 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
   map<string,RooRealVar*> mapVar;
   mapVar["mass"]= new RooRealVar( "m_yy", "mass", 105, 160);
-  mapVar["mass"]->setBins(220);
+  if ( fitMethod.find( "range10" ) != string::npos ) mapVar["mass"]->setRange( 120, 130 );
+  else if ( fitMethod.find( "range20" ) != string::npos ) mapVar["mass"]->setRange( 115, 135 );
+  
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
   mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 0.1, 10 );
   mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0.1, 20 );
@@ -382,7 +388,7 @@ void FillArray( const DataStore &dataStore, const unsigned fluctLine, map<string
   
  }  
  //====================================================================
-void PrintResult( const list<DataStore> &lDataStore, const string &outFile, const vector<string> &categoriesName ) {
+void PrintResult( const list<DataStore> &lDataStore, const string &outFile, const vector<string> &categoriesName, list<string> &tablesName ) {
 
    map<string,multi_array<double,2>> tables;
    list<string> variables = GetVariables();
@@ -408,7 +414,6 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
    }
    if ( nCats < 0 ) throw runtime_error( "PrintResult : No valid categories." );
    if ( !tables.begin()->second.size() ) throw runtime_error( "PrintResult : No systematic to print." );
-   //   if ( tables.begin()->second.size() % 2 ) throw runtime_error( "PrintResult : Odd number of columns." );
    vector<string> colsName={"systName"};
 
    list<list<string>> forInCombine;
@@ -426,8 +431,11 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
 
    for ( auto itVar = tables.begin(); itVar!=tables.end(); ++itVar ) {
+     colsName.front() = ExtractVariable( itVar->first );
+     if ( colsName.front() != "mean" && colsName.front()!="sigma" ) continue;
      string outName = StripString( outFile, 0, 1 ) + "_" + itVar->first +".csv";
      PrintArray( outName, itVar->second, linesName, colsName );
+     tablesName.push_back( outName );
    }
 
    
@@ -501,7 +509,6 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
-      nominalFit[category]->GetDataset()->Print();
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
     }
@@ -510,7 +517,6 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
-    itData->GetDataset()->Print();
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
     pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
   }
@@ -518,7 +524,11 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
 
 }
 //==========================================================
-void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, string outName, const vector<string> &categoriesName ) {
+void DrawDists( const MapPlot &mapPlot, 
+		const list<DataStore> &dataStores, 
+		string outName, 
+		const vector<string> &categoriesName,
+		const list<string> &tablesName ) {
 
   map<string,vector<TCanvas*>> mapCan;
   double meanY=0.82;
@@ -585,6 +595,11 @@ void DrawDists( const MapPlot &mapPlot, const list<DataStore> &dataStores, strin
     }
   }
 
+  stream << "\\clearpage\n\\centering" << endl;
+  for ( auto itTable=tablesName.begin(); itTable!=tablesName.end(); ++itTable ) {
+
+    stream<<"\\adjustbox{max width=\\linewidth}{\\csvautotabular{" << *itTable << "}}\\\\\n";
+  }
   stream << "\\end{document}\n";
   stream.close();
   string commandLine = "pdflatex -interaction=batchmode " + texName + " -output-directory " + outName;

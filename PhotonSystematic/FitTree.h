@@ -48,18 +48,18 @@ void FillDataset( const std::vector<std::string> &rootFilesName,
 void GetCommonVars( ChrisLib::MapBranches &mapBranch, std::list<std::string> &commonVars );
 void CreateDataStoreList( std::list<DataStore> &dTList, const MapSet &mapSet );
 void FillFluctFit( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
-void FixParametersMethod ( unsigned int category, const std::string &fitMethod, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar );
+void FixParametersMethod ( unsigned int category, const std::string &fitMethod, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar, const std::string &NPName );
 void FillNominalFit( std::list<DataStore> &dataStore, std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
 
 /**\brief Plot the RooPlot oject to have final canvas.
  */
-void DrawDists( const MapPlot &mapPlot, const std::list<DataStore> &dataStores, std::string outName, const std::vector<std::string> &categoriesName );
+void DrawDists( const MapPlot &mapPlot, const std::list<DataStore> &dataStores, std::string outName, const std::vector<std::string> &categoriesName, const std::list<std::string> &tablesName );
 
 /**\brief Fill RooPlot with nominal, up and down fluctuation distribution and fit
  */
 void PlotDists( MapPlot &mapPlot, const std::list<DataStore> &dataStore, const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
 
-void PrintResult( const std::list<DataStore> &lDataStore, const std::string &outFile, const std::vector<std::string> &categoriesName );
+void PrintResult( const std::list<DataStore> &lDataStore, const std::string &outFile, const std::vector<std::string> &categoriesName, std::list<std::string> &tablesName );
 void SelectAnalysisBranches( const std::string &analysis, ChrisLib::MapBranches &mapBranch, std::list<std::string> &branchesOfInterest, std::list<std::string> &NPName );
 void SelectVariablesAnalysis( const std::string &analysis, std::list<std::string> &variables );
 
@@ -86,7 +86,7 @@ inline const std::list<std::string> &GetAllowedAnalyses() {
 }
 
 inline const std::list<std::string> &GetAllowedFitMethods() {
-  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI"};
+  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20"};
   return allowedFitMethods;
 }
 
