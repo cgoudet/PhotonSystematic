@@ -584,6 +584,7 @@ void DrawDists( const MapPlot &mapPlot,
   string texName = outName+"_Plots.tex";
   fstream stream( texName, fstream::out );
   WriteLatexHeader( stream, "Photon Calibration Systematics" );
+  stream << "\\tableofcontents\n";
   for ( auto itVectCan = mapCan.begin(); itVectCan!=mapCan.end(); ++itVectCan ) {
     vector<string> plots;
     stream << "\\section{" << repStr(itVectCan->first) << "}\n";
@@ -592,8 +593,8 @@ void DrawDists( const MapPlot &mapPlot,
       string name = outName + "_" + string((*itCan)->GetName()) + ".pdf";
       (*itCan)->SaveAs( name.c_str());
       plots.push_back(name);
-      WriteLatexMinipage( stream, plots, 2 );
     }
+    WriteLatexMinipage( stream, plots, 3 );
   }
 
   stream << "\\clearpage\n\\centering" << endl;
