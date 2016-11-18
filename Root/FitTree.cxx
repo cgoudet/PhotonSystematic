@@ -66,7 +66,6 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
     ( "analysis", po::value<string>( &analysis )->default_value("Couplings"), "Analysis which defines the event categorization : \nCouplings : Couplings\nDiffXS : Differential cross-section\nDiffXSPhi : Differential cross-section, phi categorisation" )
     ( "fitMethod", po::value<string>( &fitMethod )->default_value("fitAll_fitExtPOI"), "Name of the fitting method" )
     ( "catOnly", po::value<vector<unsigned>>( &catOnly )->multitoken(), "" )
-    //    ( "systOnly", po::value<vector<string>>( &systOnly )->multitoken(), "" )
     ( "NPName", po::value<vector<string>>( &vectNPName )->multitoken(), "" )
     ;
 
@@ -84,11 +83,7 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
   FillDataset( rootFilesName, analysis, mapSet, NPName );
 
-  //Create a directory at the target to hold all results.
-  outFileName = StripString( outFileName, 0, 1 );
-  system( ("mkdir " + outFileName).c_str() );
-  if ( outFileName.back() != '/' ) outFileName+="/";
-
+  
   list<DataStore> dtList;
   CreateDataStoreList( dtList, mapSet );
 
@@ -99,8 +94,15 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   if ( analysis == "Couplings" ) categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( analysis == "DiffXS" ) categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( analysis == "DiffXSPhi" ) categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
-  if ( outFileName.back() =='/' ) outFileName += "SystVariation";
+  
 
+  //Create a directory at the target to hold all results.
+  if ( outFileName != "" ) {
+    outFileName = StripString( outFileName, 0, 1 );
+    system( ("mkdir " + outFileName).c_str() );
+    if ( outFileName.back() != '/' ) outFileName+="/";
+  }
+  outFileName += "SystVariation";
 
   list<string> tablesName;
   PrintResult( dtList, outFileName, categoriesName, tablesName );
@@ -149,7 +151,7 @@ void FillDataset( const vector<string> &rootFilesName,
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
     else {
       mapCBParameters[*it]->setRange(-100, 160);
-      mapCBParameters[*it]->setBins( 260*4 );
+      mapCBParameters[*it]->setBins( 260*2 );
     }
   }
 
@@ -169,10 +171,11 @@ void FillDataset( const vector<string> &rootFilesName,
     cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
     if ( inFile->IsZombie() ) throw invalid_argument( "FitTree : input file does not exist : " + vFileName );
-
+    
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
-
+    
     mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
+    
     if ( branchesToLink.empty() ) {//Optimize the branches to effectively link to gain reading time
       SelectAnalysisBranches( analysis, mapBranch, branchesToLink, NPName );
       mapBranch.ClearMaps();
@@ -180,13 +183,15 @@ void FillDataset( const vector<string> &rootFilesName,
       GetCommonVars( mapBranch, commonVars );
     }
 
+
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
       FillEntryDataset( NPName, mapBranch, mapSet, mapCBParameters, catVar, commonVars );
     }//end iEntry
-    
-    delete inTree;
+
+    delete inTree;    
+    inFile->Close( "R" );
     delete inFile;
   }//end vFileName
 
@@ -224,19 +229,18 @@ void FillEntryDataset( const list<string> &NPName,
   for ( list<string>::const_iterator itNPName = NPName.begin(); itNPName!=NPName.end(); ++itNPName ) {
     string branchPrefix = ( *itNPName!="" ? *itNPName + "_"  : "" );
     string catBranchName = ( isCatVarCommon ? branchPrefix : "" ) +catVar;
-
-    int category = static_cast<int>( mapBranch.GetVal( catBranchName ) );    
+    int category = static_cast<int>(mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
     
     for ( auto itObs = observables.begin(); itObs!=observables.end(); ++itObs ) {
       if ( !itObs->second ) continue;
 
       string branchName = branchPrefix+string(itObs->second->GetTitle() );
-      itObs->second->setVal( mapBranch.GetVal(branchName) );
+      itObs->second->setVal( mapBranch.GetDouble(branchName));
       setObservables.add( *itObs->second );
 
       if ( string(itObs->second->GetName() ) ==  "weight" ) {
-	itObs->second->setVal( mapBranch.GetVal(ExtractVariable(branchName)) );
+	itObs->second->setVal( mapBranch.GetDouble(ExtractVariable(branchName)));
 	weightVar = itObs->second;
       }
     }// end itObs
@@ -406,7 +410,7 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
      unsigned index = systIndex.size();
      if ( posSyst == systIndex.end() ) {
        systIndex[systName] = index;
-       linesName.push_back( systName );
+       linesName.push_back( ReplaceString("_","-")(systName) );
      }
      else index = posSyst->second;
 
@@ -418,16 +422,16 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
 
    list<list<string>> forInCombine;
    forInCombine.push_back( list<string>() );
-   forInCombine.push_back( {"down", "up"} );
+   forInCombine.push_back( {"Down", "Up"} );
 
    unsigned nCols = tables.begin()->second[0].size()/2;
    if ( categoriesName.empty() || nCols !=categoriesName.size() ) 
      for ( unsigned i=0; i<nCols; ++i ) forInCombine.front().push_back( string(TString::Format( "cat%d", i )) );
-   else copy( categoriesName.begin(), categoriesName.end(), back_inserter(forInCombine.front() ) );
+   else transform( categoriesName.begin(), categoriesName.end(), back_inserter(forInCombine.front() ), ReplaceString(" ","") );
 
 
    list<string> combined;
-   CombineNames( forInCombine, combined );
+   CombineNames( forInCombine, combined, "" );
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
 
    for ( auto itVar = tables.begin(); itVar!=tables.end(); ++itVar ) {
@@ -565,6 +569,7 @@ void DrawDists( const MapPlot &mapPlot,
       myLineText( 0.16, 0.48, 2, 1, "down", 0.035, 2 );
       myText( upX, 0.86, 1, "up"  );
       myText( downX, 0.86, 1, "down"  );
+      myText( 2*upX-downX, 2*meanY-sigmaY, 1, "\%" );
     }
     else (*vectCan)[category]->cd();
 
@@ -581,7 +586,9 @@ void DrawDists( const MapPlot &mapPlot,
   }
 
   ReplaceString repStr( "_", "\\_" );
+  outName = StripString( outName, 0, 1 );
   string texName = outName+"_Plots.tex";
+  cout << "writing tex : " << texName << endl;
   fstream stream( texName, fstream::out );
   WriteLatexHeader( stream, "Photon Calibration Systematics" );
   stream << "\\tableofcontents\n";
@@ -592,7 +599,7 @@ void DrawDists( const MapPlot &mapPlot,
       if ( ! (*itCan) ) continue;
       string name = outName + "_" + string((*itCan)->GetName()) + ".pdf";
       (*itCan)->SaveAs( name.c_str());
-      plots.push_back(name);
+      plots.push_back(StripString(name));
     }
     WriteLatexMinipage( stream, plots, 3 );
   }
@@ -600,12 +607,13 @@ void DrawDists( const MapPlot &mapPlot,
   stream << "\\clearpage\n\\centering" << endl;
   for ( auto itTable=tablesName.begin(); itTable!=tablesName.end(); ++itTable ) {
 
-    stream<<"\\adjustbox{max width=\\linewidth}{\\csvautotabular{" << *itTable << "}}\\\\\n";
+    stream<<"\\adjustbox{max width=\\linewidth}{\\csvautotabular{" << StripString(*itTable, 1, 0 ) << "}}\\\\\n";
   }
   stream << "\\end{document}\n";
   stream.close();
-  string commandLine = "pdflatex -interaction=batchmode " + texName + " -output-directory " + outName;
-  system( commandLine.c_str() );
-  system( commandLine.c_str() );
+  string directory = texName.substr( 0, texName.find_last_of("/"));
+  string commandLine = "pdflatex -interaction=batchmode " + StripString(texName);
+  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
+
 }
 //==========================================================

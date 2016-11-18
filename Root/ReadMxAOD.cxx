@@ -223,7 +223,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
       // if (totEntry==1) cout << "keptEventTime : " << duration << endl;
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
-      if ( ( totEntry%100000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
+      if ( ( totEntry%30000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
   	string dumName = isOutputDirectory ? outDirectory : outDirectory + StripString(*itFileName, 1, 0);
   	cout << "saving : " << dumName << endl;
   	cout << "entries : " << outTree->GetEntries() << endl;
