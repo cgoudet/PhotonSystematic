@@ -8,6 +8,8 @@
 #include "RooRealVar.h"
 #include "RooPlot.h"
 
+#include <boost/multi_array.hpp>
+
 #include <string>
 #include <map>
 #include <list>
@@ -51,6 +53,8 @@ void FillFluctFit( const std::string &fitMethod, std::list<DataStore> &dataStore
 void FixParametersMethod ( unsigned int category, const std::string &fitMethod, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar, const std::string &NPName );
 void FillNominalFit( std::list<DataStore> &dataStore, std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
 void SaveFitValues( std::list<DataStore> &dataStore, const std::string &outName );
+void CreateDatacard( std::map<std::string,boost::multi_array<double,2>> tables, const std::vector<std::string> &categoriesName, const std::vector<std::string> &NPName , const std::string &outName );
+
 /**\brief Plot the RooPlot oject to have final canvas.
  */
 void DrawDists( const MapPlot &mapPlot, const std::list<DataStore> &dataStores, std::string outName, const std::vector<std::string> &categoriesName, const std::list<std::string> &tablesName );

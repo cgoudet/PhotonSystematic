@@ -35,7 +35,13 @@ using boost::extents;
 #include <fstream>
 #include <map>
 #include <bitset>
+#include <sstream>
+#include <istream>
+#include <ostream>
 
+using std::istream;
+using std::ostream;
+using std::stringstream;
 using std::cout;
 using std::endl;
 using std::vector;
@@ -444,6 +450,8 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
      tablesName.push_back( outName );
    }
 
+   //   linesName.erase( linesName.begin(), ++linesName.begin() );
+   CreateDatacard( tables, categoriesName, linesName, outFile );
    
  }
 
@@ -637,4 +645,44 @@ void SaveFitValues( list<DataStore> &dataStore, const string &outName ) {
   }
 
   stream.close();
+}
+
+//==========================================================
+void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<string> &categoriesName, const vector<string> &NPName , const string &outName ) {
+
+  cout << "NPName : " << endl;
+  copy( NPName.begin(), NPName.end(), ostream_iterator<string>(cout,"\n") );
+  cout << "categoriesName : " << endl;
+  copy( categoriesName.begin(), categoriesName.end(), ostream_iterator<string>(cout,"\n") );
+
+  vector<stringstream> streams( categoriesName.size() );
+  for ( unsigned iCol=0; iCol<streams.size(); ++iCol )  streams[iCol] << "[" << categoriesName[iCol] << "]\n";
+  cout << "title" << endl;
+
+
+  RooRealVar var( "var", "var", -100 );
+  for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
+    if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
+    cout << itTables->first << endl;
+    for ( unsigned iLine=0; iLine<NPName.size(); ++iLine ) {
+      cout << "iLine : " << iLine << endl;
+      string name = NPName[iLine] + "_" + itTables->first;
+      for ( unsigned iCol=0; iCol<2*categoriesName.size(); iCol+=2 ) {
+	cout << "iCol : " << iCol << endl;
+	var.SetName( name.c_str() );
+	cout << ReplaceString( "-", "_" )(name) << endl;
+	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][iCol+1] ) continue;
+	var.setRange( itTables->second[iLine][iCol]*100, itTables->second[iLine][iCol+1]*100 );
+	unsigned iCat = iCol/2;
+	ostream &s=streams[iCat];
+	s << name << " = ";
+	var.writeToStream( s, 0 );
+	s << endl;
+      }
+    }	
+  }
+
+  fstream outFileStream( outName + "_datacard.txt", fstream::out );
+  for ( auto it=streams.begin(); it!=streams.end(); ++it ) outFileStream << it->str() << endl;
+  outFileStream.close();
 }
