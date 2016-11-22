@@ -18,7 +18,7 @@ typedef std::map<std::string,std::vector<RooPlot*>> MapPlot;
 
 /**\brief Fit the dataset of systematic variation and fill mapPlot with corresponding RooPlots
  */
-void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly, MapPlot &mapPlot );
+void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly, MapPlot &mapPlot, const std::string &outNamePrefix );
 void FitTree( const std::vector<std::string> &rootFilesName, std::string outFileName, const std::string &inConfFileName );
 void FillInitialValuesFitParam( std::map<std::string,std::vector<double>> &mapInitValues );
 
@@ -50,7 +50,7 @@ void CreateDataStoreList( std::list<DataStore> &dTList, const MapSet &mapSet );
 void FillFluctFit( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
 void FixParametersMethod ( unsigned int category, const std::string &fitMethod, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar, const std::string &NPName );
 void FillNominalFit( std::list<DataStore> &dataStore, std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
-
+void SaveFitValues( std::list<DataStore> &dataStore, const std::string &outName );
 /**\brief Plot the RooPlot oject to have final canvas.
  */
 void DrawDists( const MapPlot &mapPlot, const std::list<DataStore> &dataStores, std::string outName, const std::vector<std::string> &categoriesName, const std::list<std::string> &tablesName );

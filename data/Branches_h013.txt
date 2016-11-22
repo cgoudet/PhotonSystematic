@@ -1,7 +1,0 @@
-HGamEventInfo
-HGamEventInfo_EG_RESOLUTION_ALL__1up
-HGamEventInfo_EG_RESOLUTION_ALL__1down
-HGamEventInfo_EG_SCALE_ALL__1up
-HGamEventInfo_EG_SCALE_ALL__1down
-
-

@@ -33,7 +33,8 @@ bool TestFitDatasets( list<DataStore> &dtList ) {
   vector<string> systOnly = { "EG_SCALE_ZEESYST__1down", "EG_SCALE_ZEESYST__1up" };
   vector<unsigned> catOnly = { 0 };
   MapPlot mapPlot;
-  FitDatasets( fitMethod, dtList, catOnly, systOnly, mapPlot );
+  string outName;
+  FitDatasets( fitMethod, dtList, catOnly, systOnly, mapPlot, outName );
 
   return true;
 }

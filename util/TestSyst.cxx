@@ -40,7 +40,7 @@ int main( int argc, char* argv[] ) {
 
   if ( mode == 0 ) ReadMxAOD( inFilesName, outFile, inConfFile, debug );
   else if ( mode == 1 ) FitTree( inFilesName, outFile, inConfFile );
-
+  else cout << "Chosen mode(" << mode << ") was not understood" << endl;
   return 0;
 }
 

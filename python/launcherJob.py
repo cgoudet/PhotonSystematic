@@ -7,7 +7,24 @@ sys.path.append(os.path.abspath('/sps/atlas/c/cgoudet/Hgam/FrameWork/PlotFunctio
 from SideFunction import *
 
 #==========================================
+def FitTreeLocal( outFile, inputs, confFile='' ) :
+    print( "FitTreeLocal" )
+    confFile = AbsPath( confFile )
+    print( 'confFile : ' + confFile )
+    outFile = AddSlash( outFile )
 
+    inFiles = listFiles( inputs )
+    launcherName='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+outFile + 'FitTree.sh'
+
+    commandLine = 'TestSyst --mode 1 '
+    if confFile != '' : commandLine += ' --inConfFile ' + confFile
+    commandLine +=  ' --outFileName /sps/atlas/c/cgoudet/Hgam/FrameWork/Results/' + outFile 
+    commandLine += ' ' + ' '.join( listFiles( inputs ) )
+    
+    print( commandLine )
+    os.system( commandLine )
+
+#==========================================
 def FitTree( outFile, inputs, confFile='' ) :
     print( "FitTree" )
     confFile = AbsPath( confFile )
@@ -46,7 +63,7 @@ def ConfigFileContent( inputName, category, var ) :
     output += 'latexOpt=0.16 0.9\n'
     output += 'latexOpt=0.16 0.84\n'
     output += 'line=0\n'
-    output += 'yTitle=syst. unc. (%)\n'
+    output += 'yTitle=syst. unc.\n'
 
     outFileName = inputName[:inputName.rfind('/')+1]
     output += 'plotDirectory=' + outFileName 
@@ -82,8 +99,8 @@ def parseArgs():
         default=0, type=int )
 
     parser.add_argument('directory', type=str, help="Directory where all inputs are stored" )
-    parser.add_argument('--inputs', type=str, default='/sps/atlas/c/cgoudet/Hgam/Inputs/MxAOD_h013_Full/ntuple/', help="Directory where all inputs are stored" )
-    parser.add_argument('--configFile', type=str, default='/sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/FitFull.boost', help="Directory where all inputs are stored" )
+    parser.add_argument('--inputs', type=str, default='/sps/atlas/c/cgoudet/Hgam/Inputs/MxAOD_h013_Full/ntuple/*16*.root', help="Directory where all inputs are stored" )
+    parser.add_argument('--configFile', type=str, default='/sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/TestFitTree.boost', help="Directory where all inputs are stored" )
     args = parser.parse_args()
 
     return args
@@ -93,6 +110,7 @@ def main() :
     print( 'launcherJobs' );
     args = parseArgs()
     if args.doMode==1 : FitTree( args.directory, args.inputs, args.configFile )
+    if args.doMode==2 : FitTreeLocal( args.directory, args.inputs, args.configFile )
     else : SystCategory( args.directory )
 
 #==========================================

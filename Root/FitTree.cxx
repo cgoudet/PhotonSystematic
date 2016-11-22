@@ -87,8 +87,15 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   list<DataStore> dtList;
   CreateDataStoreList( dtList, mapSet );
 
+  if ( outFileName != "" ) {
+    outFileName = StripString( outFileName, 0, 1 );
+    system( ("mkdir " + outFileName).c_str() );
+    if ( outFileName.back() != '/' ) outFileName+="/";
+  }
+  outFileName += "SystVariation";
+
   MapPlot mapPlot;
-  FitDatasets( fitMethod, dtList, catOnly, vectNPName, mapPlot );
+  FitDatasets( fitMethod, dtList, catOnly, vectNPName, mapPlot, outFileName );
 
   vector<string> categoriesName;
   if ( analysis == "Couplings" ) categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
@@ -97,12 +104,6 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   
 
   //Create a directory at the target to hold all results.
-  if ( outFileName != "" ) {
-    outFileName = StripString( outFileName, 0, 1 );
-    system( ("mkdir " + outFileName).c_str() );
-    if ( outFileName.back() != '/' ) outFileName+="/";
-  }
-  outFileName += "SystVariation";
 
   list<string> tablesName;
   PrintResult( dtList, outFileName, categoriesName, tablesName );
@@ -118,8 +119,8 @@ void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
   mapInitValues["sigma"]={1.5, 1, 3 };
   mapInitValues["alphaHi"]= {1.6, 0, 5 };
   mapInitValues["alphaLow"]={1.3, 0, 5};
-  mapInitValues["nLow"]={9, 0, 100};
-  mapInitValues["nHi"]={5, 0, 100};
+  mapInitValues["nLow"]={9, 0, 10};
+  mapInitValues["nHi"]={5, 0, 10};
 }
 
 //=================================================
@@ -333,7 +334,7 @@ void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const ve
   }
 }
 //======================================================
-void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vector<unsigned> &catOnly, const vector<string> &systOnly, MapPlot &mapPlot ) {
+void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vector<unsigned> &catOnly, const vector<string> &systOnly, MapPlot &mapPlot, const string &outNamePrefix ) {
 
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
@@ -344,10 +345,10 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
   mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 0.1, 10 );
-  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0.1, 20 );
-  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 0.1, 20 );
-  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 0.1, 20 );
-  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 0.1, 20 );
+  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0, 20 );
+  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 0, 20 );
+  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", -10, 20 );
+  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", -10, 20 );
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
 
@@ -364,6 +365,7 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   }
 
   FillFluctFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
+  SaveFitValues( dataStore, outNamePrefix );
   PlotDists( mapPlot, dataStore, nominalFit, pdf, mapVar );
   
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
@@ -569,7 +571,7 @@ void DrawDists( const MapPlot &mapPlot,
       myLineText( 0.16, 0.48, 2, 1, "down", 0.035, 2 );
       myText( upX, 0.86, 1, "up"  );
       myText( downX, 0.86, 1, "down"  );
-      myText( 2*upX-downX, 2*meanY-sigmaY, 1, "\%" );
+      myText( 2*upX-downX, 2*meanY-sigmaY, 1, "\\%" );
     }
     else (*vectCan)[category]->cd();
 
@@ -617,3 +619,22 @@ void DrawDists( const MapPlot &mapPlot,
 
 }
 //==========================================================
+void SaveFitValues( list<DataStore> &dataStore, const string &outName ) {
+
+  fstream stream( outName + "_values.csv", fstream::out );
+  stream << "NP,cat,mean,sigma,alphaHi,alphaLow,nHi,nLow\n";
+
+  for ( auto itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
+    stream << itData->GetName() 
+	   << "," << itData->GetCategory()
+	   <<"," << itData->GetMean() 
+	   << "," << itData->GetSigma()
+	   << "," << itData->GetAlphaHi()
+	   << "," << itData->GetAlphaLow()
+	   << "," << itData->GetNHi()
+	   << "," << itData->GetNLow()
+	   << endl;
+  }
+
+  stream.close();
+}

@@ -16,9 +16,8 @@ DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_datas
 
 void DataStore::Fit( RooAbsPdf *pdf ) {
   if ( !m_dataset ) return ;
-  m_dataset->Print();
   if ( m_dataset->numEntries() < 10 ) FillDSCB( -99., -99., -99., -99., -99., -99. );
-  else FitData( m_dataset, pdf, -1 ); 
+  else FitData( m_dataset, pdf, 0 ); 
 
 }
 //=========================
