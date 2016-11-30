@@ -29,7 +29,7 @@ void SpreadGauss() {
   }
 
   vector<double> shifts = { 1.002, 1.005 };
-  vector<string> histNames = { "2*Nominal", "Nominal*"+to_string(shifts[0]), "Nominal*"+to_string(shifts[1]), "Nominal*"+to_string(shifts[0]) +"+Nominal*"+to_string(shifts[1]) };
+  vector<string> histNames = { "2*Nominal", "Nominal*"+to_string(shifts[0]), "Nominal*"+to_string(shifts[1]), "Nominal*"+to_string(shifts[0]) +"+Nominal*"+to_string(shifts[1]), "Nominal + Nominal*"+to_string(shifts[0]), "Nominal + Nominal*"+to_string(shifts[1]) };
   vector<TH1*> histPoints;
   for (unsigned int iHist=0; iHist<histNames.size(); iHist++ ) {
     TString name = TString::Format( "histPoints%d", iHist);
@@ -39,13 +39,18 @@ void SpreadGauss() {
   
   for ( unsigned int iRand=0; iRand<vectRand.size(); iRand++ ) {
     histPoints[0]->Fill( vectRand[iRand] );
+
     if ( iRand%2 ) {
       histPoints[1]->Fill( vectRand[iRand]*(shifts[0]) );
       histPoints[3]->Fill( vectRand[iRand]*(shifts[0]) );
+      histPoints[4]->Fill( vectRand[iRand] );
+      histPoints[5]->Fill( vectRand[iRand] );
     }
     else {
       histPoints[2]->Fill( vectRand[iRand]*(shifts[1]) );
       histPoints[3]->Fill( vectRand[iRand]*(shifts[1]) );
+      histPoints[4]->Fill( vectRand[iRand]*(shifts[0]) );
+      histPoints[5]->Fill( vectRand[iRand]*(shifts[1]) );
     }
   }
 
@@ -56,17 +61,26 @@ void SpreadGauss() {
   fb->SetLineColor(kBlue);
   vector<string> inOptions = {
     "legendPos=0.2 0.9", 
-    "extendUp=0.3"
+    "extendUp=0.3",
+    "rangeUserY=0 0.99"
   };
   double xMin = histPoints[0]->GetXaxis()->GetXmin(), xMax=histPoints[0]->GetXaxis()->GetXmax();
+
+  vector<string> legend;
   for (unsigned int iHist=0; iHist<histPoints.size(); iHist++ ) {  
     cout << histPoints[iHist]->GetEntries() << endl;
     histPoints[iHist]->Fit( fb, "", "", xMin, xMax );
     TString name = TString::Format( "%s : m=%2.2f, s=%2.3f", histNames[iHist].c_str(), fb->GetParameter(1), fb->GetParameter(2) );
-    inOptions.push_back( "legend=" + string(name) );
+    legend.push_back( "legend=" + string(name) );
   }
 
-  DrawPlot( histPoints, "SpreadGauss", inOptions );
+  vector<TObject*> drawHist;
+  vector<int> drawIndices = { 0, 2, 5};
+  for ( auto it=drawIndices.begin(); it!=drawIndices.end(); ++it ) {
+    drawHist.push_back( histPoints[*it ] );
+    inOptions.push_back( legend[*it] );
+  }
+  DrawPlot( drawHist, "SpreadGauss", inOptions );
  
 }
 

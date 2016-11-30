@@ -65,6 +65,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
   if ( !xAOD::Init().isSuccess() ) throw runtime_error( "xAOD Init Failed" );
 
   bool isOutputDirectory = ( outDirectory.substr(outDirectory.find_last_of( "." )) == ".root" );
+  cout << "isOutputDirectory : " << isOutputDirectory << endl;
   if ( !isOutputDirectory && outDirectory.back() != '/' ) outDirectory+="/";
 
   ReplaceString repStr("HGamEventInfo_");
@@ -224,7 +225,7 @@ int ReadMxAOD( const vector<string> &rootFilesName, string outDirectory, const s
 
       if ( debug==1 ) UpdateDuplicateList( duplicateVarsName, mapVal, defaultVarValues );
       if ( ( totEntry%30000==0 && outTree->GetEntries() ) || ( itFileName == --rootFilesName.end() && i_event==nentries-1 ) ) {
-  	string dumName = isOutputDirectory ? outDirectory : outDirectory + StripString(*itFileName, 1, 0);
+  	string dumName = isOutputDirectory ? outDirectory : outDirectory + process + "_" + to_string(nFile) + ".root";
   	cout << "saving : " << dumName << endl;
   	cout << "entries : " << outTree->GetEntries() << endl;
   	TFile *dumFile = new TFile( dumName.c_str(), "recreate" );

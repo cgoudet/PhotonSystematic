@@ -10,7 +10,7 @@ class DataStore {
   DataStore( std::string name="", int category=-1, RooAbsData* dataset =0 );
 
   void Divide( const DataStore &dataStore );
-  void Fit( RooAbsPdf *pdf );
+  void Fit( RooAbsPdf *pdf, std::string fitMethod );
   void FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow );
   void ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alphaHi, RooRealVar* alphaLow, RooRealVar* nHi, RooRealVar* nLow ) const;
   void Print(); 

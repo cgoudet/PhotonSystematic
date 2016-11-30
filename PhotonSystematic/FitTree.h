@@ -51,7 +51,7 @@ void GetCommonVars( ChrisLib::MapBranches &mapBranch, std::list<std::string> &co
 void CreateDataStoreList( std::list<DataStore> &dTList, const MapSet &mapSet );
 void FillFluctFit( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
 void FixParametersMethod ( unsigned int category, const std::string &fitMethod, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar, const std::string &NPName );
-void FillNominalFit( std::list<DataStore> &dataStore, std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
+void FillNominalFit(const std::string &fitMethod,  std::list<DataStore> &dataStore, std::vector<DataStore*> &nominalFit, RooAbsPdf &pdf, std::map<std::string,RooRealVar*> &mapVar );
 void SaveFitValues( std::list<DataStore> &dataStore, const std::string &outName );
 void CreateDatacard( std::map<std::string,boost::multi_array<double,2>> tables, const std::vector<std::string> &categoriesName, const std::vector<std::string> &NPName , const std::string &outName );
 
@@ -90,7 +90,7 @@ inline const std::list<std::string> &GetAllowedAnalyses() {
 }
 
 inline const std::list<std::string> &GetAllowedFitMethods() {
-  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20"};
+  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20","fitAll_fitExtPOI_meanHist"};
   return allowedFitMethods;
 }
 

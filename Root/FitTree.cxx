@@ -174,6 +174,7 @@ void FillDataset( const vector<string> &rootFilesName,
     CombineNames( inCombine, branchesToLink );
   }
 
+
   for ( auto &vFileName : rootFilesName ) {
     cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
@@ -302,10 +303,23 @@ void CreateDataStoreList( list<DataStore> &dTList, const MapSet &mapSet ) {
   }
 }
 //====================================================================
-void FillNominalFit( list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
+void FitMeanHist( const DataStore &data, map<string,RooRealVar*> &mapVar ) {
+  RooAbsData *dataset = data.GetDataset();
+  if ( !dataset ) return;
+  TH1* hist = dataset->createHistogram( "hist", *mapVar["mass"], RooFit::Binning( 100, 120, 130 ) );
+  hist->SetBinContent(0, 0);
+  hist->SetBinContent(hist->GetNbinsX()+1, 0);
+  mapVar.at("mean")->setVal( hist->GetMean() );
+  mapVar.at("sigma")->setVal( hist->GetRMS() );
+}
+//====================================================================
+void FillNominalFit( const string &fitMethod, list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
-    itData->Fit( pdf );
+
+    if ( fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
+    else itData->Fit( pdf, fitMethod );
+
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
     unsigned category = static_cast<unsigned>(itData->GetCategory());
   while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
@@ -335,7 +349,8 @@ void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const ve
     if ( itData->GetName() == "" ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, fitMethod, nominalFit, mapVar, itData->GetName() );
-    itData->Fit( pdf );
+    if ( fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
+    else itData->Fit( pdf, fitMethod );
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
   }
 }
@@ -346,20 +361,18 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
   map<string,RooRealVar*> mapVar;
   mapVar["mass"]= new RooRealVar( "m_yy", "mass", 105, 160);
-  if ( fitMethod.find( "range10" ) != string::npos ) mapVar["mass"]->setRange( 120, 130 );
-  else if ( fitMethod.find( "range20" ) != string::npos ) mapVar["mass"]->setRange( 115, 135 );
   
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
   mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 0.1, 10 );
   mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0, 20 );
   mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 0, 20 );
-  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", -10, 20 );
-  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", -10, 20 );
+  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 0, 20 );
+  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 0, 20 );
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
 
   vector<DataStore*> nominalFit;
-  FillNominalFit( dataStore, nominalFit, pdf, mapVar );
+  FillNominalFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
 
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( catOnly.size() && systOnly.size() && itData->GetName() != "" && 
@@ -518,13 +531,14 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     ExtendMapVect( mapPlot, systName, category );
     vector<RooPlot*> *vectPlot = &mapPlot[systName];
     if ( !(*vectPlot)[category] ) {
-      (*vectPlot)[category] = mapVar["mass"]->frame( 115, 135, 20 );
+      (*vectPlot)[category] = mapVar["mass"]->frame( 120, 130, 55 );
       (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-      pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
+      cout << "sumEtries : " << category << " " << nominalFit[category]->GetDataset()->sumEntries() << " " << pdf->getVal() << endl;
+      pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1), RooFit::Normalization( nominalFit[category]->GetDataset()->sumEntries(),RooAbsReal::NumEvent), RooFit::Range(105,160) );
     }
    
     string fluct = ExtractVariable( name );
@@ -532,7 +546,7 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     int color = 1 + ( isUpFluct ? 2 : 1 );
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
+    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::Normalization( itData->GetDataset()->sumEntries(), RooAbsReal::NumEvent ), RooFit::Range(105,160) );
   }
 
 
@@ -572,6 +586,7 @@ void DrawDists( const MapPlot &mapPlot,
       ATLASLabel( 0.16, 0.9, "Work In Progress", 1, 0.05 );
       myText( 0.16, 0.85, 1, "Simulation", 0.04 );
       //myText( 0.16, 0.8, 1, "#sqrt{s}=13TeV, L=1.00 fb^{-1}", 0.04 );
+      myText( 0.16, 0.68, 1, systName.c_str()  );
       myText( 0.16, 0.6, 1, "All processes"  );
       myText( 0.16, 0.64, 1, categoriesName[category].c_str() );
       myLineText( 0.16, 0.56, 1, 1, "nominal", 0.035, 2 );
@@ -686,3 +701,6 @@ void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<stri
   for ( auto it=streams.begin(); it!=streams.end(); ++it ) outFileStream << it->str() << endl;
   outFileStream.close();
 }
+
+
+

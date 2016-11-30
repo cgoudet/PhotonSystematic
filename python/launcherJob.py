@@ -31,11 +31,11 @@ def FitTree( outFile, inputs, confFile='' ) :
     print( 'confFile : ' + confFile )
     outFile = AddSlash( outFile )
 
-    inFiles = listFiles( inputs )
+    inFiles = listFiles( AbsPath(inputs) )
+    print(inFiles)
     launcherName='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+outFile + 'FitTree.sh'
 
     fileContent = BatchHeader( '/sps/atlas/c/cgoudet/Hgam/FrameWork', 'PhotonSystematic', 'TestSyst' )
-    fileContent += 'cp -v ' + AddSlash(AbsPath( inputs )) +'* .\n'
     fileContent += 'TestSyst --mode 1 ' + ( ' --inConfFile ' + confFile if confFile!='' else '' ) + ( ' --outFileName ' + outFile if outFile!='' else '' ) + ' '.join( [''] + inFiles ) + '\n'
     outDirectory = '/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/' + outFile
     fileContent += 'mkdir ' + outDirectory + '\n'
@@ -45,11 +45,13 @@ def FitTree( outFile, inputs, confFile='' ) :
     bashFile.write( fileContent )
     bashFile.close()
 
-    os.system( '~/sub28.sh FitTree ' + launcherName.replace( '.sh', '.log' ) + ' ' + launcherName.replace('.sh','.err') +' ' +launcherName+'\n' )
+    commandLine = '~/sub28.sh FitTree ' + launcherName.replace( '.sh', '.log' ) + ' ' + launcherName.replace('.sh','.err') +' ' +launcherName+'\n'
+    print( commandLine  )
+    os.system( commandLine )
 
 #==========================================
 def ConfigFileContent( inputName, category, var ) :
-    output = 'inputType=5\n'
+    output = 'inputType=1\n'
     output += ('rootFileName=' + inputName + '\n')*2
     output += 'legend=Up\nlegend=Down\n'
     output += 'varWeight='+category.replace('_','-')+'Up\n'
@@ -60,11 +62,13 @@ def ConfigFileContent( inputName, category, var ) :
     output += 'drawStyle=2\n'
     output += 'latex=' + var + '\n'
     output += 'latex=' + category + '\n'
-    output += 'latexOpt=0.16 0.9\n'
-    output += 'latexOpt=0.16 0.84\n'
+    output += 'latexOpt=0.16 0.95\n'
+    output += 'latexOpt=0.16 0.915\n'
+    output += 'legendPos=0.8 0.96\n'
     output += 'line=0\n'
     output += 'yTitle=syst. unc.\n'
-
+    output += 'saveRoot=1\n'
+    output += 'grid=1\n'
     outFileName = inputName[:inputName.rfind('/')+1]
     output += 'plotDirectory=' + outFileName 
 
@@ -77,11 +81,57 @@ def ConfigFileContent( inputName, category, var ) :
     return outFileName
 
 #==========================================
+def CompareMethFileContent( inputsName, category, var ) :
+
+    output = 'inputType=1\n'
+    output += '\n'.join( [ 'rootFileName=' + inName for inName in inputsName ] ) + '\n'
+    output += 'legend=105-160\nlegend=120-130\nlegend=direct measurement\n'
+    output += ('varWeight='+category.replace('_','-')+'Up\n')*len(inputsName)
+    output += 'varName=' + var + '\n'
+    output += 'doLabels=1\n'
+    output += 'clean=0\n'
+    output += 'drawStyle=2\n'
+    output += 'latex=' + var + '\n'
+    output += 'latex=up fluctuation\n'
+    output += 'latex=' + category + '\n'
+    output += 'latexOpt=0.16 0.95\n'
+    output += 'latexOpt=0.16 0.91\n'
+    output += 'latexOpt=0.16 0.87\n'
+    output += 'legendPos=0.8 0.96\n'
+    output += 'line=0\n'
+    output += 'yTitle=syst. unc.\n'
+    output += 'saveRoot=1\n'
+    output += 'grid=1\n'
+    output += 'plotDirectory=/sps/atlas/c/cgoudet/Plots/'
+
+    outFileName = '/sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/'
+    outFileName=outFileName+var+'_'+category+'.boost'
+    boostFile = open( outFileName, 'w' )
+    boostFile.write( output )
+    boostFile.close()
+    return outFileName
+#==========================================
 def AddPrefix( name ) :
     pref = StripString(name)
     pref = pref[0:pref.find('_')]
-    name = name[0:name.rfind('.')] + '_' + pref + '.pdf'
+
+    posPoint = name.rfind('.')
+    if posPoint != -1 : name = name[0:name.rfind('.')]
+    name += '_' + pref + '.pdf'
+
     return name
+
+#==========================================
+def CompareMeth() :
+    print( CompareMeth )
+    inFiles=['/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+inFile for inFile in ['allSyst/','reducedRange10/','meanHist/'] ]
+    print( inFiles )
+    categoriesName = ["Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
+    boostFiles = [ CompareMethFileContent( [inFile+'SystVariation_'+var+'.csv' for inFile in inFiles], cat, var ) for cat in categoriesName for var in ['mean', 'sigma' ]  ]
+    print( boostFiles )    
+    os.system( 'PlotDist '+' '.join( boostFiles ) )
+    os.system( 'pdfjoin ' + ' '.join( [ '/sps/atlas/c/cgoudet/Plots/' + AddPrefix(StripString(x)) for x in boostFiles ] ) + ' --outfile ' + inFile + 'categoriesSyst.pdf' )
+
 #==========================================
 def SystCategory( inFile ) :
     print( 'SystCategory' )
@@ -92,6 +142,14 @@ def SystCategory( inFile ) :
     os.system( 'pdfjoin ' + ' '.join( [ AddPrefix(x) for x in boostFiles ] ) + ' --outfile ' + inFile + 'categoriesSyst.pdf' )
 
 #==========================================
+def ReadMxAOD( inputs, configFile, outputDirectory ) :
+    commandLine = 'TestSyst --mode 0 ' + ' '.join( listFiles(inputs) )
+    commandLine += ' --inConfFile ' + configFile 
+    commandLine += ' --outFileName ' + AddSlash(outputDirectory)
+
+    print( commandLine )
+    os.system( commandLine )
+#==========================================
 def parseArgs():
     parser = argparse.ArgumentParser(description="Parser")
     parser.add_argument(
@@ -99,7 +157,7 @@ def parseArgs():
         default=0, type=int )
 
     parser.add_argument('directory', type=str, help="Directory where all inputs are stored" )
-    parser.add_argument('--inputs', type=str, default='/sps/atlas/c/cgoudet/Hgam/Inputs/MxAOD_h013_Full/ntuple/*16*.root', help="Directory where all inputs are stored" )
+    parser.add_argument('--inputs', type=str, default='/sps/atlas/c/cgoudet/Hgam/Inputs/MxAOD_h013_Full/ntuple/ggH_0.root', help="Directory where all inputs are stored" )
     parser.add_argument('--configFile', type=str, default='/sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/TestFitTree.boost', help="Directory where all inputs are stored" )
     args = parser.parse_args()
 
@@ -110,7 +168,9 @@ def main() :
     print( 'launcherJobs' );
     args = parseArgs()
     if args.doMode==1 : FitTree( args.directory, args.inputs, args.configFile )
-    if args.doMode==2 : FitTreeLocal( args.directory, args.inputs, args.configFile )
+    elif args.doMode==2 : FitTreeLocal( args.directory, args.inputs, args.configFile )
+    elif args.doMode==3 : ReadMxAOD( args.inputs, args.configFile, args.directory )
+    elif args.doMode==4 : CompareMeth()
     else : SystCategory( args.directory )
 
 #==========================================

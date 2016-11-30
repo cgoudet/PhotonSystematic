@@ -14,10 +14,18 @@ using namespace ChrisLib;
 DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
 //=========================
 
-void DataStore::Fit( RooAbsPdf *pdf ) {
+void DataStore::Fit( RooAbsPdf *pdf, string fitMethod ) {
   if ( !m_dataset ) return ;
   if ( m_dataset->numEntries() < 10 ) FillDSCB( -99., -99., -99., -99., -99., -99. );
-  else FitData( m_dataset, pdf, 0 ); 
+  else {
+    RooAbsReal* nll = 0;
+    if ( fitMethod.find( "range10" ) !=string::npos ) nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false), RooFit::Range(120,130) );
+    else if ( fitMethod.find( "range20" ) !=string::npos ) nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false), RooFit::Range(115,135) );
+    else nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false) );
+    nll->enableOffsetting( true );
+    RooMinimizer *_minuit = new  RooMinimizer(*nll);
+    robustMinimize(*nll, *_minuit, -1) ;
+  }
 
 }
 //=========================

@@ -8,4 +8,4 @@ NPName=EG_SCALE_ZEESYST__1up
 
 #catOnly=0
 
-fitMethod=fitAll_fitExtPOI_range10
+fitMethod=fitAll_fitExtPOI_meanHist
