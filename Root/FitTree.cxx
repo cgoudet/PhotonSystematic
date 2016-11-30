@@ -158,7 +158,7 @@ void FillDataset( const vector<string> &rootFilesName,
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
     else {
       mapCBParameters[*it]->setRange(-100, 160);
-      mapCBParameters[*it]->setBins( 260*2 );
+      mapCBParameters[*it]->setBins( 260*10 );
     }
   }
 
@@ -190,7 +190,6 @@ void FillDataset( const vector<string> &rootFilesName,
       mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
       GetCommonVars( mapBranch, commonVars );
     }
-
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
@@ -665,25 +664,15 @@ void SaveFitValues( list<DataStore> &dataStore, const string &outName ) {
 //==========================================================
 void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<string> &categoriesName, const vector<string> &NPName , const string &outName ) {
 
-  cout << "NPName : " << endl;
-  copy( NPName.begin(), NPName.end(), ostream_iterator<string>(cout,"\n") );
-  cout << "categoriesName : " << endl;
-  copy( categoriesName.begin(), categoriesName.end(), ostream_iterator<string>(cout,"\n") );
-
   vector<stringstream> streams( categoriesName.size() );
   for ( unsigned iCol=0; iCol<streams.size(); ++iCol )  streams[iCol] << "[" << categoriesName[iCol] << "]\n";
-  cout << "title" << endl;
-
 
   RooRealVar var( "var", "var", -100 );
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
-    cout << itTables->first << endl;
     for ( unsigned iLine=0; iLine<NPName.size(); ++iLine ) {
-      cout << "iLine : " << iLine << endl;
       string name = NPName[iLine] + "_" + itTables->first;
       for ( unsigned iCol=0; iCol<2*categoriesName.size(); iCol+=2 ) {
-	cout << "iCol : " << iCol << endl;
 	var.SetName( name.c_str() );
 	cout << ReplaceString( "-", "_" )(name) << endl;
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][iCol+1] ) continue;
