@@ -112,7 +112,9 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   //Create a directory at the target to hold all results.
 
   list<string> tablesName;
+  cout << "Print Results" << endl;
   PrintResult( dtList, outFileName, categoriesName, tablesName );
+  cout << "DrawDist" << endl;
   DrawDists( mapPlot, dtList, outFileName, categoriesName, tablesName );
 }
 
@@ -272,12 +274,12 @@ void FillEntryDataset( const list<string> &NPName,
 
     for ( int i = 0; i<category+1; i+=category ) {
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
-      if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000) {
-      	RooAbsData * oldSet = (*vectDataset)[i];
-      	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet, 1 );
-      	delete oldSet;
-      	(*vectDataset)[i] = histSet;
-      }
+      // if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000) {
+      // 	RooAbsData * oldSet = (*vectDataset)[i];
+      // 	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet, 1 );
+      // 	delete oldSet;
+      // 	(*vectDataset)[i] = histSet;
+      // }
     }
 
   }//end itNPName
@@ -340,6 +342,7 @@ void FixParametersMethod ( unsigned int category, const string &fitMethod, const
 
   if ( setConstant.test(0) ) mapVar["mean"]->setConstant(0);
   if ( setConstant.test(1) ) mapVar["sigma"]->setConstant(0);
+
 }
 //======================================================
 void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
@@ -362,11 +365,16 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   mapVar["mass"]= new RooRealVar( "m_yy", "mass", 105, 160);
   
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
-  mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 0.1, 10 );
-  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 0, 20 );
-  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 0, 20 );
-  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 0, 20 );
-  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 0, 20 );
+  mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 1.61, 0.1, 10 );
+  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 1.77, 0, 20 );
+  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 1.45, 0, 20 );
+  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 7.36, 0, 20 );
+  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 9.52, 0, 20 );
+  mapVar["sigma"]->setConstant(1);
+  mapVar["alphaHi"]->setConstant(1);
+  mapVar["alphaLow"]->setConstant(1);
+  mapVar["nHi"]->setConstant(1);
+  mapVar["nLow"]->setConstant(1);
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
 
@@ -461,9 +469,9 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
      PrintArray( outName, itVar->second, linesName, colsName );
      tablesName.push_back( outName );
    }
-
+   cout << "createdatacard" << endl;
    //   linesName.erase( linesName.begin(), ++linesName.begin() );
-   CreateDatacard( tables, categoriesName, linesName, outFile );
+   //   CreateDatacard( tables, categoriesName, linesName, outFile );
    
  }
 
@@ -537,7 +545,12 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
       cout << "sumEtries : " << category << " " << nominalFit[category]->GetDataset()->sumEntries() << " " << pdf->getVal() << endl;
-      pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1), RooFit::Normalization( nominalFit[category]->GetDataset()->sumEntries(),RooAbsReal::NumEvent), RooFit::Range(105,160) );
+      pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
+      // RooRealVar_InvariantMass->setRange("RangeToConsider",left_side,right_side);
+      // RooAbsReal* integralInChosenRange=myPdf_mgg->createIntegral(*RooRealVar_InvariantMass,*RooRealVar_InvariantMass,"RangeToConsider");
+      // //cout << "current window=[" << left_side << " ; " << right_side << "], Integral=" << integralInChosenRange->getVal(RooArgSet(*RooRealVar_InvariantMass)) << ", sigma=" << (right_side-left_side)/2 << endl;
+
+      // if (integralInChosenRange->getVal(RooArgSet(*RooRealVar_InvariantMass))>
     }
    
     string fluct = ExtractVariable( name );

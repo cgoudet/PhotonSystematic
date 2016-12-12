@@ -18,13 +18,16 @@ void DataStore::Fit( RooAbsPdf *pdf, string fitMethod ) {
   if ( !m_dataset ) return ;
   if ( m_dataset->numEntries() < 10 ) FillDSCB( -99., -99., -99., -99., -99., -99. );
   else {
+    cout << m_name << " " << m_category << endl;
+    ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
+    RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
     RooAbsReal* nll = 0;
     if ( fitMethod.find( "range10" ) !=string::npos ) nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false), RooFit::Range(120,130) );
     else if ( fitMethod.find( "range20" ) !=string::npos ) nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false), RooFit::Range(115,135) );
     else nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false) );
     nll->enableOffsetting( true );
     RooMinimizer *_minuit = new  RooMinimizer(*nll);
-    robustMinimize(*nll, *_minuit, -1) ;
+    robustMinimize(*nll, *_minuit, 0) ;
   }
 
 }

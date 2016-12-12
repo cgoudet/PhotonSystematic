@@ -149,6 +149,15 @@ def ReadMxAOD( inputs, configFile, outputDirectory ) :
 
     print( commandLine )
     os.system( commandLine )
+    
+#==============================================
+def TemplateFit( inputs, configFile, outputDirectory ) :
+    print( TemplateFit )
+    confFile = AbsPath( confFile )
+    print( 'confFile : ' + confFile )
+    outFile = AddSlash( outFile )
+
+
 #==========================================
 def parseArgs():
     parser = argparse.ArgumentParser(description="Parser")
@@ -171,6 +180,7 @@ def main() :
     elif args.doMode==2 : FitTreeLocal( args.directory, args.inputs, args.configFile )
     elif args.doMode==3 : ReadMxAOD( args.inputs, args.configFile, args.directory )
     elif args.doMode==4 : CompareMeth()
+    elif args.doMode==5 : TemplateFit( args.inputs, args.configFile, args.directory )
     else : SystCategory( args.directory )
 
 #==========================================
