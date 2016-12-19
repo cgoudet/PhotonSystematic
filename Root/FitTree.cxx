@@ -535,11 +535,6 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     ExtendMapVect( mapPlot, systName, category );
     vector<RooPlot*> *vectPlot = &mapPlot[systName];
     if ( !(*vectPlot)[category] ) {
-
-      // double min = mapVar["mass"]->getMin();
-      // double max = mapVar["mass"]->getMax();
-           //      (*vectPlot)[category] = mapVar["mass"]->frame( RooFit::Range(min, max), RooFit::Bins((max-min)*4), RooFit::Name( systName.c_str()) );
-      //      (*vectPlot)[category] = mapVar["mass"]->frame( RooFit::Range(115,135), RooFit::Bins(80), RooFit::Name( systName.c_str()) );
       (*vectPlot)[category] = mapVar["mass"]->frame(115, 135);
       (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
@@ -548,18 +543,12 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
 
-      // RooRealVar_InvariantMass->setRange("RangeToConsider",left_side,right_side);
-      //      RooAbsReal* integralInChosenRange=pdf->createIntegral(*mapVar["mass"],*mapVar["mass"],RooFit::Range(115,135));
-      // //cout << "current window=[" << left_side << " ; " << right_side << "], Integral=" << integralInChosenRange->getVal(RooArgSet(*RooRealVar_InvariantMass)) << ", sigma=" << (right_side-left_side)/2 << endl;
-
-      // if (integralInChosenRange->getVal(RooArgSet(*RooRealVar_InvariantMass))>
     }
     string fluct = ExtractVariable( name );
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-    //    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::Normalization( itData->GetDataset()->sumEntries(), RooAbsReal::NumEvent ), RooFit::Range(105,160) );
     pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
   }
 
