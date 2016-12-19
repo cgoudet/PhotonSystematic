@@ -13,7 +13,7 @@ bool TestFillDataSet( MapSet &mapSet ) {
 
   string analysis = "Couplings";
   list<string> NPName;
-  FillDataset( rootFilesName, analysis, mapSet, NPName );
+  FillDataset( rootFilesName, analysis, "dumFitMethod", mapSet, NPName );
   //  cout << "size : " << mapSet.size() << endl;
   if ( mapSet.size() != 159 ) throw logic_error( "TestFillDataSet : Wrong MapSet size." );
   if ( mapSet["EG_SCALE_ZEESYST__1down"][0]->numEntries() != 1744 ) throw logic_error( "TestFillDataSet : Wrong numEntries EG_SCALE_ZEESYST__1down != 1744" );

@@ -32,7 +32,6 @@ def FitTree( outFile, inputs, confFile='' ) :
     outFile = AddSlash( outFile )
 
     inFiles = listFiles( AbsPath(inputs) )
-    print(inFiles)
     launcherName='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+outFile + 'FitTree.sh'
 
     fileContent = BatchHeader( '/sps/atlas/c/cgoudet/Hgam/FrameWork', 'PhotonSystematic', 'TestSyst' )
@@ -46,7 +45,6 @@ def FitTree( outFile, inputs, confFile='' ) :
     bashFile.close()
 
     commandLine = '~/sub28.sh FitTree ' + launcherName.replace( '.sh', '.log' ) + ' ' + launcherName.replace('.sh','.err') +' ' +launcherName+'\n'
-    print( commandLine  )
     os.system( commandLine )
 
 #==========================================
@@ -125,10 +123,8 @@ def AddPrefix( name ) :
 def CompareMeth() :
     print( CompareMeth )
     inFiles=['/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+inFile for inFile in ['allSyst/','reducedRange10/','meanHist/'] ]
-    print( inFiles )
     categoriesName = ["Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
     boostFiles = [ CompareMethFileContent( [inFile+'SystVariation_'+var+'.csv' for inFile in inFiles], cat, var ) for cat in categoriesName for var in ['mean', 'sigma' ]  ]
-    print( boostFiles )    
     os.system( 'PlotDist '+' '.join( boostFiles ) )
     os.system( 'pdfjoin ' + ' '.join( [ '/sps/atlas/c/cgoudet/Plots/' + AddPrefix(StripString(x)) for x in boostFiles ] ) + ' --outfile ' + inFile + 'categoriesSyst.pdf' )
 
@@ -147,15 +143,13 @@ def ReadMxAOD( inputs, configFile, outputDirectory ) :
     commandLine += ' --inConfFile ' + configFile 
     commandLine += ' --outFileName ' + AddSlash(outputDirectory)
 
-    print( commandLine )
     os.system( commandLine )
     
 #==============================================
-def TemplateFit( inputs, configFile, outputDirectory ) :
+def TemplateFit( inputs, outputDirectory ) :
     print( TemplateFit )
-    confFile = AbsPath( confFile )
-    print( 'confFile : ' + confFile )
-    outFile = AddSlash( outFile )
+
+
 
 
 #==========================================
@@ -180,7 +174,7 @@ def main() :
     elif args.doMode==2 : FitTreeLocal( args.directory, args.inputs, args.configFile )
     elif args.doMode==3 : ReadMxAOD( args.inputs, args.configFile, args.directory )
     elif args.doMode==4 : CompareMeth()
-    elif args.doMode==5 : TemplateFit( args.inputs, args.configFile, args.directory )
+    elif args.doMode==5 : TemplateFit( args.inputs,  args.directory )
     else : SystCategory( args.directory )
 
 #==========================================

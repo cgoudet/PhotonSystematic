@@ -7,7 +7,8 @@
 #include "RooDataSet.h"
 #include "RooRealVar.h"
 #include "RooPlot.h"
-
+#include "RooAbsData.h"
+#include "RooDataHist.h"
 #include <boost/multi_array.hpp>
 
 #include <string>
@@ -23,6 +24,8 @@ typedef std::map<std::string,std::vector<RooPlot*>> MapPlot;
 void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly, MapPlot &mapPlot, const std::string &outNamePrefix );
 void FitTree( const std::vector<std::string> &rootFilesName, std::string outFileName, const std::string &inConfFileName );
 void FillInitialValuesFitParam( std::map<std::string,std::vector<double>> &mapInitValues );
+
+RooDataHist* CreateDataHist( RooAbsData *oldSet );
 
 /**\brief Fill datasets from input TTreee
    \param NPName name of the considered Nuisance parameters 
@@ -41,6 +44,7 @@ void FillEntryDataset( const std::list<std::string> &NPName,
 
 void FillDataset( const std::vector<std::string> &rootFilesName,
 		  const std::string &analysis,
+		  const std::string &fitMethod,
 		  MapSet &mapSet,
 		  std::list<std::string> &NPName
 		  );

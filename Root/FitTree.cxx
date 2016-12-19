@@ -87,9 +87,8 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   MapSet mapSet;
   list<string> NPName;
   copy( vectNPName.begin(), vectNPName.end(), back_inserter(NPName) );
-  FillDataset( rootFilesName, analysis, mapSet, NPName );
+  FillDataset( rootFilesName, analysis, fitMethod, mapSet, NPName );
 
-  
   list<DataStore> dtList;
   CreateDataStoreList( dtList, mapSet );
 
@@ -119,21 +118,22 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
 }
 
 //=================================================
-void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
-  mapInitValues.clear();
-  mapInitValues["weight"]={ 1, 0, 1e3 };
-  mapInitValues["mean"]={ 125, 124, 126 };
-  mapInitValues["m_yy"]= { 126, 105, 160 };
-  mapInitValues["sigma"]={1.5, 1, 3 };
-  mapInitValues["alphaHi"]= {1.6, 0, 5 };
-  mapInitValues["alphaLow"]={1.3, 0, 5};
-  mapInitValues["nLow"]={9, 0, 10};
-  mapInitValues["nHi"]={5, 0, 10};
-}
+// void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
+//   mapInitValues.clear();
+//   mapInitValues["weight"]={ 1, 0, 1e3 };
+//   mapInitValues["mean"]={ 125, 124, 126 };
+//   mapInitValues["m_yy"]= { 126, 105, 160 };
+//   mapInitValues["sigma"]={1.5, 1, 3 };
+//   mapInitValues["alphaHi"]= {1.6, 0, 5 };
+//   mapInitValues["alphaLow"]={1.3, 0, 5};
+//   mapInitValues["nLow"]={9, 0, 10};
+//   mapInitValues["nHi"]={5, 0, 10};
+// }
 
 //=================================================
 void FillDataset( const vector<string> &rootFilesName,
 		  const string &analysis,
+		  const string &fitMethod,
 		  MapSet &mapSet,
 		  list<string> &NPName
 		  ) {
@@ -159,8 +159,12 @@ void FillDataset( const vector<string> &rootFilesName,
     mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), 0 );
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
     else {
-      mapCBParameters[*it]->setRange(-100, 160);
-      mapCBParameters[*it]->setBins( 260*10 );
+      if ( fitMethod.find( "range20" ) !=string::npos ) mapCBParameters[*it]->setRange(115, 135);
+      else if ( fitMethod.find( "range10" ) !=string::npos ) mapCBParameters[*it]->setRange(120, 130);
+      else mapCBParameters[*it]->setRange(105, 160);
+      double min = mapCBParameters[*it]->getMin();
+      double max = mapCBParameters[*it]->getMax();
+      mapCBParameters[*it]->setBins( (max-min)*10 );
     }
   }
 
@@ -256,9 +260,8 @@ void FillEntryDataset( const list<string> &NPName,
 
     if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
     //    if ( weightVar->getVal() == 0 ) continue;
-    if ( observables["m_yy"]->getVal() < 0 ) continue;
+    if ( observables["m_yy"]->getVal() == observables["m_yy"]->getMin() || observables["m_yy"]->getVal() == observables["m_yy"]->getMax()  ) continue;
     
-
 
     ExtendMapVect( mapSet, *itNPName, category );
     vector<RooAbsData*> *vectDataset = &mapSet[*itNPName];
@@ -274,12 +277,8 @@ void FillEntryDataset( const list<string> &NPName,
 
     for ( int i = 0; i<category+1; i+=category ) {
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
-      // if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000) {
-      // 	RooAbsData * oldSet = (*vectDataset)[i];
-      // 	RooDataHist *histSet = new RooDataHist( oldSet->GetName(), oldSet->GetTitle(), setObservables, *oldSet, 1 );
-      // 	delete oldSet;
-      // 	(*vectDataset)[i] = histSet;
-      // }
+      if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000)
+	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );
     }
 
   }//end itNPName
@@ -317,7 +316,7 @@ void FitMeanHist( const DataStore &data, map<string,RooRealVar*> &mapVar ) {
 void FillNominalFit( const string &fitMethod, list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
-
+    //    itData->SetDataset( CreateDataHist( itData->GetDataset() ) );
     if ( fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
     else itData->Fit( pdf, fitMethod );
 
@@ -349,6 +348,7 @@ void FillFluctFit( const string &fitMethod, list<DataStore> &dataStore, const ve
   cout << "fluctuation" << endl;
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
+    //    itData->SetDataset( CreateDataHist( itData->GetDataset() ) );
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, fitMethod, nominalFit, mapVar, itData->GetName() );
     if ( fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
@@ -362,7 +362,8 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + fitMethod );
   map<string,RooRealVar*> mapVar;
-  mapVar["mass"]= new RooRealVar( "m_yy", "mass", 105, 160);
+  //  mapVar["mass"]= new RooRealVar( "m_yy", "mass", 125);
+  mapVar["mass"]= static_cast<RooRealVar*>(dataStore.begin()->GetDataset()->get()->first());
   
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
   mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 1.61, 0.1, 10 );
@@ -370,11 +371,6 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
   mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 1.45, 0, 20 );
   mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 7.36, 0, 20 );
   mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 9.52, 0, 20 );
-  mapVar["sigma"]->setConstant(1);
-  mapVar["alphaHi"]->setConstant(1);
-  mapVar["alphaLow"]->setConstant(1);
-  mapVar["nHi"]->setConstant(1);
-  mapVar["nLow"]->setConstant(1);
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
 
@@ -392,8 +388,9 @@ void FitDatasets( const string &fitMethod, list<DataStore> &dataStore, const vec
 
   FillFluctFit( fitMethod, dataStore, nominalFit, pdf, mapVar );
   SaveFitValues( dataStore, outNamePrefix );
+  cout << "PlotDists : " << endl;
   PlotDists( mapPlot, dataStore, nominalFit, pdf, mapVar );
-  
+  cout << "Divide" << endl;
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
@@ -538,27 +535,32 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     ExtendMapVect( mapPlot, systName, category );
     vector<RooPlot*> *vectPlot = &mapPlot[systName];
     if ( !(*vectPlot)[category] ) {
-      (*vectPlot)[category] = mapVar["mass"]->frame( 120, 130, 55 );
+
+      // double min = mapVar["mass"]->getMin();
+      // double max = mapVar["mass"]->getMax();
+           //      (*vectPlot)[category] = mapVar["mass"]->frame( RooFit::Range(min, max), RooFit::Bins((max-min)*4), RooFit::Name( systName.c_str()) );
+      //      (*vectPlot)[category] = mapVar["mass"]->frame( RooFit::Range(115,135), RooFit::Bins(80), RooFit::Name( systName.c_str()) );
+      (*vectPlot)[category] = mapVar["mass"]->frame(115, 135);
       (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-      cout << "sumEtries : " << category << " " << nominalFit[category]->GetDataset()->sumEntries() << " " << pdf->getVal() << endl;
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
+
       // RooRealVar_InvariantMass->setRange("RangeToConsider",left_side,right_side);
-      // RooAbsReal* integralInChosenRange=myPdf_mgg->createIntegral(*RooRealVar_InvariantMass,*RooRealVar_InvariantMass,"RangeToConsider");
+      //      RooAbsReal* integralInChosenRange=pdf->createIntegral(*mapVar["mass"],*mapVar["mass"],RooFit::Range(115,135));
       // //cout << "current window=[" << left_side << " ; " << right_side << "], Integral=" << integralInChosenRange->getVal(RooArgSet(*RooRealVar_InvariantMass)) << ", sigma=" << (right_side-left_side)/2 << endl;
 
       // if (integralInChosenRange->getVal(RooArgSet(*RooRealVar_InvariantMass))>
     }
-   
     string fluct = ExtractVariable( name );
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::Normalization( itData->GetDataset()->sumEntries(), RooAbsReal::NumEvent ), RooFit::Range(105,160) );
+    //    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::Normalization( itData->GetDataset()->sumEntries(), RooAbsReal::NumEvent ), RooFit::Range(105,160) );
+    pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
   }
 
 
@@ -704,5 +706,10 @@ void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<stri
   outFileStream.close();
 }
 
-
-
+//============================================================
+RooDataHist* CreateDataHist( RooAbsData *oldSet ) {
+  string newName = string(oldSet->GetName()) + "_hist";
+  RooDataHist *histSet = new RooDataHist( newName.c_str(), oldSet->GetTitle(), *oldSet->get(), *oldSet, 1 );
+  delete oldSet;
+  return  histSet;
+}

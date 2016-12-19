@@ -25,6 +25,7 @@ class DataStore {
   double GetNLow() const { return m_nLow; }
   double GetSigma() const { return m_sigma; }
 
+  void SetDataset( RooAbsData* dataset ) { m_dataset = dataset; }
  private :
   RooAbsData* m_dataset;
   int m_category;

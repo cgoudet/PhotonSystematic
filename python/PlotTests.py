@@ -123,7 +123,6 @@ def PlotNominal( var, mapResults, mapLegends ) :
                  linestyle= '-', 
                  label=mapLegends[iPlot]
                  )
-        print(mapLegends[iPlot])
 
     ax.legend(loc='upper right', frameon=False)
     ax.set_ylabel( var )
@@ -165,15 +164,22 @@ def PlotComparison( systematic, var, mapResults, mapLegends ) :
     ax = fig.add_subplot(111)
     fig.subplots_adjust(bottom=0.2, top=0.95, right=0.99)
     fig.patch.set_facecolor('white')
-    nCategories = len( [ '' for key in mapResults[0].keys() if 'nominal' in key ] )
+    nCategories = 14
     #print( 'nCategories : ', nCategories )
     xAxis = range(0, nCategories)
 
+    print( mapResults )
+    print( systematic )
+    # yAxes = [ [ 100 * ( test[systematic+'_'+str(iCat)][var+'_'+pull]/test['nominal_'+str(iCat)][var+'_down']-1 ) * ( -1 if pull=='down' else 1 )
+    #             for iCat in range(0, nCategories ) ]
+    #           for test in mapResults for pull in ['up', 'down']  ]
 
     yAxes = [ [ 100 * ( test[systematic+'_'+str(iCat)][var+'_'+pull]/test['nominal_'+str(iCat)][var+'_down']-1 ) * ( -1 if pull=='down' else 1 )
                 for iCat in range(0, nCategories ) ]
               for test in mapResults for pull in ['up', 'down']  ]
-
+    print( nCategories )
+    print( 'yAxis : ' )
+    print( yAxes )
     for iPlot in range( 0, len( yAxes ) ) :
         ax.plot( xAxis, yAxes[iPlot], 
                  color=colors[iPlot/2], 
@@ -196,18 +202,16 @@ def PlotComparison( systematic, var, mapResults, mapLegends ) :
 
 #==========================================
 def GetDictionnary( dirPrefix, testID ) : 
-    print( 'GetDictionary : ', testID )
+#    print( 'GetDictionary : ', testID )
     testIDSuffix = ''
-    if testID == 1 : testIDSuffix = '_binned'
-    elif testID == 2 : testIDSuffix = '_fitAll'
+    if testID == 1 : testIDSuffix = '_range20'
+    elif testID == 2 : testIDSuffix = '_range10'
     elif testID == 3 : testIDSuffix = '_range'
     elif testID == 4 : testIDSuffix = '_meanSigma'
     elif testID == 5 : testIDSuffix = '_fitN'
 
-    fileName = dirPrefix  + testIDSuffix + '/mapResult.csv'
-    print(fileName)
+    fileName = dirPrefix  + testIDSuffix + '/SystVariation_values.csv'
     readValues = np.genfromtxt( fileName, dtype='S100', delimiter=',' )
-#    print( readValues )
     mapResults = dict()
     nLines = readValues.size / len( readValues[0] )
     nCols = len( readValues[0] )
@@ -234,41 +238,36 @@ def getFittedValues( key, systematic, array ) :
 def plotTest( dirPrefix, testID ) :
     print( 'testID : ', testID, ' ', testID<0 )
     mapResults = []
-    mapLegends = [ "Official", 'Binned', "FitAll", "Range", "MeanSigma", "fitN" ]          
+    mapLegends = [ "nominal", 'range20', "range10" ]
     if testID == -99 : 
         mapResults = [ GetDictionnary( dirPrefix, 0 ) ]
         mapLegend  = [mapLegends[0]]
-        print( 'testID99' )
     elif testID < 0 :
         mapResults = [ GetDictionnary( dirPrefix, -testID ) ]
         mapLegend  = [mapLegends[-testID]]
-        print( 'mapLegend : ', mapLegend )
     elif testID==2 or testID==4 :
         mapResults = [ GetDictionnary( dirPrefix, iID ) for iID in [ 0, 2, 4 ] ] 
         mapLegends = [mapLegends[i] for i in [ 0, 2, 4 ] ]
-        print('testID pos' )
     else :
-        mapResults = [ GetDictionnary( dirPrefix, iID ) for iID in ( range(0, 6 ) if testID == 0 else [ 0, testID ] ) ] 
+        mapResults = [ GetDictionnary( dirPrefix, iID ) for iID in ( range(0, 3 ) if testID == 0 else [ 0, testID ] ) ] 
         if testID : mapLegend = [mapLegends[0], mapLegends[testID] ]
+        print( 'Got dictionary' )
 
-
-    fluctList =  [ key[:key.rfind('_')] for key in mapResults[0].keys() ][1:]
+    fluctList =  [ key[:key.rfind('__')] for key in mapResults[0].keys() ]
     fluctList = set( fluctList )
-    fluctList.remove( 'nominal' )
-    # print( 'fluctList : ', fluctList )
-
+    fluctList.remove( '' )
+        
     variables = [ 'sigma', 'mean', 'alphaHi', 'alphaLow', 'nHi', 'nLow' ]
-    print( mapLegend ) 
 
     listPlots = []
-    listPlots = [ [ PlotNominal( param, mapResults, mapLegend )  for param in variables ] ]
+ #   listPlots = [ [ PlotNominal( param, mapResults, mapLegend )  for param in variables ] ]
 
-    listPlots += [ [ PlotComparison( systematic, param, mapResults, mapLegend ) 
-                   for param in variables ]
-                  for systematic in fluctList ]
+    listPlots += [ [ PlotComparison( systematic, param, mapResults, mapLegends ) 
+                     for param in variables ]
+                   for systematic in fluctList ]
 
-    listPlots += [ PlotDSCB( mapResults, mapLegend, ['up'], [syst] ) for syst in ['EG_RESOLUTION_ALL', 'EG_SCALE_ALL'] ]
-
+#    listPlots += [ PlotDSCB( mapResults, mapLegend, ['up'], [syst] ) for syst in ['EG_RESOLUTION_ALL', 'EG_SCALE_ALL'] ]
+    print( fluctList )
     return listPlots
 
 
