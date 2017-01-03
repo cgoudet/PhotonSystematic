@@ -97,8 +97,10 @@ inline const std::list<std::string> &GetAllowedAnalyses() {
   return allowedAnalyses;
 }
 
+/** \brief List of authorized options tags
+ */
 inline const std::list<std::string> &GetAllowedFitMethods() {
-  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20","fitAll_fitExtPOI_meanHist"};
+  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20","fitAll_fitExtPOI_meanHist", "fitAll_fitExtPOI_range20_merge"};
   return allowedFitMethods;
 }
 

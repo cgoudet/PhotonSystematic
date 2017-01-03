@@ -29,6 +29,7 @@ namespace po = boost::program_options;
 using boost::multi_array;
 using boost::extents;
 
+#include <tuple>
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -39,6 +40,7 @@ using boost::extents;
 #include <istream>
 #include <ostream>
 
+using std::tuple;
 using std::istream;
 using std::ostream;
 using std::stringstream;
@@ -210,8 +212,7 @@ string RemoveVar( const string &inName ) {
   }
   return branchName;
 }
-
-//=============================================
+//==============================================
 void FillEntryDataset( const list<string> &NPName, 
 		       const MapBranches &mapBranch, 
 		       MapSet &mapSet,
@@ -221,46 +222,73 @@ void FillEntryDataset( const list<string> &NPName,
 		       const string &fitMethod
 		       ) {
 
-
   bool isCatVarCommon = find( commonVars.begin(), commonVars.end(), catVar ) != commonVars.end();
+  bool doMerging { fitMethod.find( "merge" ) != string::npos };
+  RooRealVar *weightVar = observables["weight"];
+  if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
 
-  RooRealVar *weightVar = 0;
-  RooArgSet setObservables;		 
+  map<string,tuple<double, double ,int>> eventsPerChannel;
+
+  double massMin = observables["m_yy"]->getMin();
+  double massMax = observables["m_yy"]->getMax();
+
   for ( list<string>::const_iterator itNPName = NPName.begin(); itNPName!=NPName.end(); ++itNPName ) {
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
     string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
     int category = static_cast<int>(mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
-    
+  
+    tuple<double,double,int> currentEvent { 0, 0, category };
     for ( auto itObs=observables.begin(); itObs!=observables.end(); ++itObs ) {
       if ( !itObs->second ) continue;
 
-      string branchName = branchPrefix+string(itObs->second->GetTitle() );
-      itObs->second->setVal( mapBranch.GetDouble(branchName));
-      setObservables.add( *itObs->second );
-
-      if ( string(itObs->second->GetName() ) ==  "weight" ) {
-	//	itObs->second->setVal( mapBranch.GetDouble(ExtractVariable(branchName)));
-	weightVar = itObs->second;
-      }
+      string title = itObs->second->GetTitle();
+      string branchName = branchPrefix+title;
+      double value = mapBranch.GetDouble(branchName);
+      if ( title == "m_yy" ) std::get<0>(currentEvent) = value;
+      else std::get<1>(currentEvent) = value;
     }// end itObs
 
-    if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
-    if ( observables["m_yy"]->getVal() == observables["m_yy"]->getMin() || observables["m_yy"]->getVal() == observables["m_yy"]->getMax()  ) continue;
+    double mass = std::get<0>(currentEvent);
+    if ( mass < massMin || mass > massMax ) continue;
+    if ( doMerging && branchPrefix.find( "ETABIN" )!= string::npos ) {
+      int posEta = branchPrefix.find( "ETABIN" );
+      int posFluct = branchPrefix.find( "__", posEta )+2;
+      string mergeName = branchPrefix.substr( 0, branchPrefix.size()-1 );
+      mergeName.replace(posEta, posFluct-posEta, "" );
+      //      cout << "merged : " << branchPrefix << " " << mergeName << endl;
+      map<string,tuple<double,double,int>>::iterator currentMax = eventsPerChannel.find( mergeName );
+      if ( currentMax == eventsPerChannel.end() ) eventsPerChannel[mergeName] = currentEvent;
+      else if ( branchPrefix.find( "1up" ) !=string::npos && std::get<0>(*currentMax) < mass ) currentMax->second = currentEvent;
+      else if ( branchPrefix.find( "1down" ) !=string::npos && std::get<0>(*currentMax) < mass ) currentMax->second = currentEvent;
+    }
+    else eventsPerChannel[*itNPName] = currentEvent;
 
-    ExtendMapVect( mapSet, *itNPName, category );
-    vector<RooAbsData*> *vectDataset = &mapSet[*itNPName];
+  }//end itNPName
+
+  RooArgSet setObservables;
+  for ( auto obs : observables ) setObservables.add( *obs.second );
+
+  for ( auto itChannels : eventsPerChannel ) {
+    int category = std::get<2>(itChannels.second);
+    string name = itChannels.first;
+    observables["m_yy"]->setVal( std::get<0>( itChannels.second ) );
+    weightVar->setVal( std::get<1>( itChannels.second ) );
+
+    ExtendMapVect( mapSet, name, category );
+    vector<RooAbsData*> *vectDataset = &mapSet[name];
     for ( int i = 0; i<category+1; i+=category ) {
-      if ( !(*vectDataset)[category] ) {
-	TString title = TString::Format( "%s_cat%d", itNPName->c_str(), category );
-	(*vectDataset)[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
+      if ( !(*vectDataset)[i] ) {
+	TString title = TString::Format( "%s_cat%d", name.c_str(), i );
+	(*vectDataset)[i] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
+	vectDataset = &mapSet[name];
       }
+
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
       if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000)
 	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );
     }
-
-  }//end itNPName
+  }//end itChannels
 }
 
 //=================================================
