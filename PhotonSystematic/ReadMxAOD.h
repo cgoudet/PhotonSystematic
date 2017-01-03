@@ -63,12 +63,13 @@ std::string ExtractVariable( const std::string &inName );
   Tested.
  */
 inline const std::list<std::string>& GetAnalysisVariables() { 
-  static const std::list<std::string> vect = { "DPhi_yy","catCoup","catXS","catXSPhi","m_yy", "pt_yy","weight","weightXS"};
+  //  static const std::list<std::string> vect = { "DPhi_yy","catCoup","catXS","catXSPhi","m_yy", "pt_yy","weight","weightXS"};
+  static const std::list<std::string> vect { "catCoup", "m_yy","weight"};
   return vect;
 }
 
 inline const std::list<std::string>& GetAnalysisProcesses() {
-  static const std::list<std::string> list = { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
+  static const std::list<std::string> list { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
   return list;
 }
 /*\brief Find a process name in a file name

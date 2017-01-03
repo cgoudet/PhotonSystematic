@@ -1,3 +1,5 @@
+#include <PhotonSystematic/FillNtuple.h>
+
 #include <PhotonSystematic/TutorialAnalysis.h>
 
 #ifdef __CINT__
@@ -11,4 +13,8 @@
 
 #ifdef __CINT__
 #pragma link C++ class TutorialAnalysis+;
+#endif
+
+#ifdef __CINT__
+#pragma link C++ class FillNtuple+;
 #endif

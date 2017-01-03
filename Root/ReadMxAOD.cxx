@@ -301,7 +301,7 @@ bool FillMapFromEventInfo( const string &outName,
     if ( currentVal == -1 ) currentVal = -99;
   }
   else if ( varName == "pt_yy" ) currentVal = eventInfo->auxdata<float>( "pT_yy" );
-  else if ( varName == "DPhi_yy" ) currentVal = eventInfo->auxdata<float>( "Dphi_y_y" );
+  else if ( varName == "DPhi_yy" ) currentVal = eventInfo->auxdata<float>( "Dphi_yy" );
   else if ( varName == "catXS" ) {
     currentVal = eventInfo->auxdata<float>( "pT_yy" )/1e3;//in GeV
     const vector<double> XSCatPt = GetPtCategXS();
@@ -311,7 +311,7 @@ bool FillMapFromEventInfo( const string &outName,
     else currentVal = -99;
   }
   else if ( varName == "catXSPhi" ) {
-    currentVal = eventInfo->auxdata<float>( "Dphi_y_y" );
+    currentVal = eventInfo->auxdata<float>( "Dphi_yy" );
     const vector<double> XSCatPhi = GetPhiCategXS();
     unsigned int XSCat=0;
     while ( currentVal> XSCatPhi[XSCat] ) ++XSCat; 

@@ -83,7 +83,7 @@ def CompareMethFileContent( inputsName, category, var ) :
 
     output = 'inputType=1\n'
     output += '\n'.join( [ 'rootFileName=' + inName for inName in inputsName ] ) + '\n'
-    output += 'legend=105-160\nlegend=120-130\nlegend=direct measurement\n'
+#    output += 'legend=105-160\nlegend=120-130\nlegend=direct measurement\n'
     output += ('varWeight='+category.replace('_','-')+'Up\n')*len(inputsName)
     output += 'varName=' + var + '\n'
     output += 'doLabels=1\n'
@@ -122,7 +122,7 @@ def AddPrefix( name ) :
 #==========================================
 def CompareMeth() :
     print( CompareMeth )
-    inFiles=['/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+inFile for inFile in ['allSyst/','reducedRange10/','meanHist/'] ]
+    inFiles=['/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/'+inFile for inFile in ['h013_Full_range20/'] ]
     categoriesName = ["Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
     boostFiles = [ CompareMethFileContent( [inFile+'SystVariation_'+var+'.csv' for inFile in inFiles], cat, var ) for cat in categoriesName for var in ['mean', 'sigma' ]  ]
     os.system( 'PlotDist '+' '.join( boostFiles ) )
@@ -146,13 +146,6 @@ def ReadMxAOD( inputs, configFile, outputDirectory ) :
     os.system( commandLine )
     
 #==============================================
-def TemplateFit( inputs, outputDirectory ) :
-    print( TemplateFit )
-
-
-
-
-#==========================================
 def parseArgs():
     parser = argparse.ArgumentParser(description="Parser")
     parser.add_argument(
@@ -165,8 +158,8 @@ def parseArgs():
     args = parser.parse_args()
 
     return args
-#==========================================
 
+#==========================================
 def main() :
     print( 'launcherJobs' );
     args = parseArgs()
@@ -174,7 +167,6 @@ def main() :
     elif args.doMode==2 : FitTreeLocal( args.directory, args.inputs, args.configFile )
     elif args.doMode==3 : ReadMxAOD( args.inputs, args.configFile, args.directory )
     elif args.doMode==4 : CompareMeth()
-    elif args.doMode==5 : TemplateFit( args.inputs,  args.directory )
     else : SystCategory( args.directory )
 
 #==========================================

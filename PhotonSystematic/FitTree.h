@@ -34,13 +34,17 @@ RooDataHist* CreateDataHist( RooAbsData *oldSet );
    \param observables List of the observables to put into the dataset (m_yy,weight)
    \param catVar Name of the category keyword to look for
    \param commonVars Variables which are put under a common name for all systematics
+   \param fitMethod Tag to choose algorithm options
+
  */
 void FillEntryDataset( const std::list<std::string> &NPName, 
 		       const ChrisLib::MapBranches &mapBranch, 
 		       MapSet &mapSet,
 		       std::map<std::string,RooRealVar*> &observables,
 		       const std::string &catVar,
-		       const std::list<std::string> &commonVars);
+		       const std::list<std::string> &commonVars,
+		       const std::string &fitMethod
+		       );
 
 void FillDataset( const std::vector<std::string> &rootFilesName,
 		  const std::string &analysis,

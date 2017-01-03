@@ -116,20 +116,6 @@ void FitTree( const vector<string> &rootFilesName,  string outFileName, const st
   cout << "DrawDist" << endl;
   DrawDists( mapPlot, dtList, outFileName, categoriesName, tablesName );
 }
-
-//=================================================
-// void FillInitialValuesFitParam( map<string,vector<double>> &mapInitValues ) {
-//   mapInitValues.clear();
-//   mapInitValues["weight"]={ 1, 0, 1e3 };
-//   mapInitValues["mean"]={ 125, 124, 126 };
-//   mapInitValues["m_yy"]= { 126, 105, 160 };
-//   mapInitValues["sigma"]={1.5, 1, 3 };
-//   mapInitValues["alphaHi"]= {1.6, 0, 5 };
-//   mapInitValues["alphaLow"]={1.3, 0, 5};
-//   mapInitValues["nLow"]={9, 0, 10};
-//   mapInitValues["nHi"]={5, 0, 10};
-// }
-
 //=================================================
 void FillDataset( const vector<string> &rootFilesName,
 		  const string &analysis,
@@ -200,7 +186,7 @@ void FillDataset( const vector<string> &rootFilesName,
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
-      FillEntryDataset( NPName, mapBranch, mapSet, mapCBParameters, catVar, commonVars );
+      FillEntryDataset( NPName, mapBranch, mapSet, mapCBParameters, catVar, commonVars, fitMethod );
     }//end iEntry
 
     delete inTree;    
@@ -231,7 +217,8 @@ void FillEntryDataset( const list<string> &NPName,
 		       MapSet &mapSet,
 		       map<string,RooRealVar*> &observables,
 		       const string &catVar,
-		       const list<string> &commonVars
+		       const list<string> &commonVars,
+		       const string &fitMethod
 		       ) {
 
 
@@ -240,12 +227,12 @@ void FillEntryDataset( const list<string> &NPName,
   RooRealVar *weightVar = 0;
   RooArgSet setObservables;		 
   for ( list<string>::const_iterator itNPName = NPName.begin(); itNPName!=NPName.end(); ++itNPName ) {
-    string branchPrefix = ( *itNPName!="" ? *itNPName + "_"  : "" );
-    string catBranchName = ( isCatVarCommon ? branchPrefix : "" ) +catVar;
+    string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
+    string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
     int category = static_cast<int>(mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
     
-    for ( auto itObs = observables.begin(); itObs!=observables.end(); ++itObs ) {
+    for ( auto itObs=observables.begin(); itObs!=observables.end(); ++itObs ) {
       if ( !itObs->second ) continue;
 
       string branchName = branchPrefix+string(itObs->second->GetTitle() );
@@ -253,29 +240,21 @@ void FillEntryDataset( const list<string> &NPName,
       setObservables.add( *itObs->second );
 
       if ( string(itObs->second->GetName() ) ==  "weight" ) {
-	itObs->second->setVal( mapBranch.GetDouble(ExtractVariable(branchName)));
+	//	itObs->second->setVal( mapBranch.GetDouble(ExtractVariable(branchName)));
 	weightVar = itObs->second;
       }
     }// end itObs
 
     if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
-    //    if ( weightVar->getVal() == 0 ) continue;
     if ( observables["m_yy"]->getVal() == observables["m_yy"]->getMin() || observables["m_yy"]->getVal() == observables["m_yy"]->getMax()  ) continue;
-    
 
     ExtendMapVect( mapSet, *itNPName, category );
     vector<RooAbsData*> *vectDataset = &mapSet[*itNPName];
-    if ( !(*vectDataset)[0] ) {
-      string title = *itNPName+"_incl";
-      (*vectDataset)[0] = new RooDataSet( title.c_str(), title.c_str(), setObservables, weightVar->GetName() );
-    }
-
-    if ( !(*vectDataset)[category] ) {
-      TString title = TString::Format( "%s_cat%d", itNPName->c_str(), category );
-      (*vectDataset)[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
-    }
-
     for ( int i = 0; i<category+1; i+=category ) {
+      if ( !(*vectDataset)[category] ) {
+	TString title = TString::Format( "%s_cat%d", itNPName->c_str(), category );
+	(*vectDataset)[category] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
+      }
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
       if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000)
 	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );

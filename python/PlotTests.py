@@ -174,9 +174,10 @@ def PlotComparison( systematic, var, mapResults, mapLegends ) :
     #             for iCat in range(0, nCategories ) ]
     #           for test in mapResults for pull in ['up', 'down']  ]
 
-    yAxes = [ [ 100 * ( test[systematic+'_'+str(iCat)][var+'_'+pull]/test['nominal_'+str(iCat)][var+'_down']-1 ) * ( -1 if pull=='down' else 1 )
+    yAxes = [ [ 100 * ( test[systematic][var+'_'+pull]/test['nominal_'+str(iCat)][var+'_down']-1 ) * ( -1 if pull=='down' else 1 )
                 for iCat in range(0, nCategories ) ]
               for test in mapResults for pull in ['up', 'down']  ]
+
     print( nCategories )
     print( 'yAxis : ' )
     print( yAxes )
@@ -212,6 +213,8 @@ def GetDictionnary( dirPrefix, testID ) :
 
     fileName = dirPrefix  + testIDSuffix + '/SystVariation_values.csv'
     readValues = np.genfromtxt( fileName, dtype='S100', delimiter=',' )
+    print( readValues )
+    exit(0)
     mapResults = dict()
     nLines = readValues.size / len( readValues[0] )
     nCols = len( readValues[0] )
