@@ -1,17 +1,22 @@
-#include <vector>
+#include "PlotFunctions/DrawOptions.h"
+
 #include "TH1D.h"
 #include "TLegend.h"
 #include "TRandom.h"
 #include "TCanvas.h"
 #include "TF1.h"
-#include <iostream>
+#include "RooRealVar.h"
+#include "RooArgSet.h"
 #include "TString.h"
-#include <string>
-#include "PlotFunctions/DrawPlot.h"
 #include "RooDataSet.h"
 #include "RooPlot.h"
 #include "RooGaussian.h"
+
+#include <vector>
+#include <iostream>
+#include <string>
 #include <fstream>
+
 using std::fstream;
 using std::vector;
 using std::cout;
@@ -59,10 +64,11 @@ void SpreadGauss() {
   TF1 *fb = new TF1("fb","gaus(0)",0,10);
   fb->SetParameter( 1, 100 );
   fb->SetLineColor(kBlue);
-  vector<string> inOptions = {
+  vector<string> inOptions {
     "legendPos=0.2 0.9", 
     "extendUp=0.3",
-    "rangeUserY=0 0.99"
+    "rangeUserY=0 0.99",
+    "outName=SpreadGauss"
   };
   double xMin = histPoints[0]->GetXaxis()->GetXmin(), xMax=histPoints[0]->GetXaxis()->GetXmax();
 
@@ -80,7 +86,9 @@ void SpreadGauss() {
     drawHist.push_back( histPoints[*it ] );
     inOptions.push_back( legend[*it] );
   }
-  DrawPlot( drawHist, "SpreadGauss", inOptions );
+  DrawOptions drawOpt;
+  drawOpt.FillOptions( inOptions );
+  drawOpt.Draw( drawHist );
  
 }
 

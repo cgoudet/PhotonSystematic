@@ -40,6 +40,7 @@ using boost::extents;
 #include <istream>
 #include <ostream>
 
+using std::for_each;
 using std::tuple;
 using std::istream;
 using std::ostream;
@@ -213,6 +214,24 @@ string RemoveVar( const string &inName ) {
   return branchName;
 }
 //==============================================
+double ComputeTotalSystMass( list<double> &masses ) {
+  if ( masses.empty() ) throw invalid_argument( "ComputeTotalSystMass : empty list" );
+
+  double nominal = masses.front();
+  masses.sort();
+  masses.erase( unique( masses.begin(), masses.end() ), masses.end() );
+  int size = masses.size();
+  if ( size == 1 ) return nominal;
+  else {
+    double val = nominal;
+    for_each( masses.begin(), masses.end(), [ &val, nominal ] ( double d ) { val*=d/nominal; } );
+    return val;
+
+  }
+  throw invalid_argument( "ComputeTotalSystMass : wrong list size " + std::to_string(size) );
+}
+
+//==============================================
 void FillEntryDataset( const list<string> &NPName, 
 		       const MapBranches &mapBranch, 
 		       MapSet &mapSet,
@@ -228,16 +247,17 @@ void FillEntryDataset( const list<string> &NPName,
   if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
 
   map<string,tuple<double, double ,int>> eventsPerChannel;
+  map<string, list<double> > masses;
 
-  double massMin = observables["m_yy"]->getMin();
-  double massMax = observables["m_yy"]->getMax();
-
+  /*Needed fot the loop
+    catvar
+    observables
+   */
   for ( list<string>::const_iterator itNPName = NPName.begin(); itNPName!=NPName.end(); ++itNPName ) {
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
     string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
     int category = static_cast<int>(mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
-  
     tuple<double,double,int> currentEvent { 0, 0, category };
     for ( auto itObs=observables.begin(); itObs!=observables.end(); ++itObs ) {
       if ( !itObs->second ) continue;
@@ -248,36 +268,49 @@ void FillEntryDataset( const list<string> &NPName,
       if ( title == "m_yy" ) std::get<0>(currentEvent) = value;
       else std::get<1>(currentEvent) = value;
     }// end itObs
-
-    double mass = std::get<0>(currentEvent);
-    if ( mass < massMin || mass > massMax ) continue;
     if ( doMerging && branchPrefix.find( "ETABIN" )!= string::npos ) {
+      double mass = std::get<0>(currentEvent);
       int posEta = branchPrefix.find( "ETABIN" );
       int posFluct = branchPrefix.find( "__", posEta )+2;
       string mergeName = branchPrefix.substr( 0, branchPrefix.size()-1 );
       mergeName.replace(posEta, posFluct-posEta, "" );
-      //      cout << "merged : " << branchPrefix << " " << mergeName << endl;
       map<string,tuple<double,double,int>>::iterator currentMax = eventsPerChannel.find( mergeName );
       if ( currentMax == eventsPerChannel.end() ) eventsPerChannel[mergeName] = currentEvent;
-      else if ( branchPrefix.find( "1up" ) !=string::npos && std::get<0>(*currentMax) < mass ) currentMax->second = currentEvent;
-      else if ( branchPrefix.find( "1down" ) !=string::npos && std::get<0>(*currentMax) < mass ) currentMax->second = currentEvent;
+      
+      map<string,list<double>>::iterator itMasses = masses.find( mergeName );
+      if ( itMasses == masses.end() ) masses[mergeName] = { mapBranch.GetDouble( "m_yy" ), mass  };
+      else itMasses->second.push_back( mass );
     }
     else eventsPerChannel[*itNPName] = currentEvent;
 
   }//end itNPName
 
+  // cout << "StatusPost\n";
+  // for ( auto it : eventsPerChannel ) cout << it.first << " " << std::get<0>(it.second) << endl;
+  // cout << "endStatus\n";
   RooArgSet setObservables;
   for ( auto obs : observables ) setObservables.add( *obs.second );
+  double massMin = observables["m_yy"]->getMin();
+  double massMax = observables["m_yy"]->getMax();
 
   for ( auto itChannels : eventsPerChannel ) {
+
     int category = std::get<2>(itChannels.second);
     string name = itChannels.first;
-    observables["m_yy"]->setVal( std::get<0>( itChannels.second ) );
+    double mass = std::get<0>( itChannels.second );
+    //    cout << itChannels.first << " " << category << " " << mass << endl;
+    map<string,list<double>>::iterator itList = masses.find( name );
+    if ( itList != masses.end() && !itList->second.empty() ) mass = ComputeTotalSystMass( itList->second );
+    //    cout << "mass : " << mass << endl;
+    if ( mass < massMin || mass > massMax ) continue;
+    //    cout << "passed" << endl;
+    observables["m_yy"]->setVal( mass );
     weightVar->setVal( std::get<1>( itChannels.second ) );
 
     ExtendMapVect( mapSet, name, category );
     vector<RooAbsData*> *vectDataset = &mapSet[name];
     for ( int i = 0; i<category+1; i+=category ) {
+      //      cout << "fill : " << i << endl;
       if ( !(*vectDataset)[i] ) {
 	TString title = TString::Format( "%s_cat%d", name.c_str(), i );
 	(*vectDataset)[i] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
@@ -289,6 +322,7 @@ void FillEntryDataset( const list<string> &NPName,
 	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );
     }
   }//end itChannels
+  //  exit(0);
 }
 
 //=================================================
@@ -323,14 +357,13 @@ void FitMeanHist( const DataStore &data, map<string,RooRealVar*> &mapVar ) {
 void FillNominalFit( const string &fitMethod, list<DataStore> &dataStore, vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
   for ( list<DataStore>::iterator itData = dataStore.begin(); itData!=dataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
-    //    itData->SetDataset( CreateDataHist( itData->GetDataset() ) );
     if ( fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
     else itData->Fit( pdf, fitMethod );
 
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
     unsigned category = static_cast<unsigned>(itData->GetCategory());
-  while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
-  nominalFit[category] = &(*itData);
+    while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
+    nominalFit[category] = &(*itData);
   }
 }
 //======================================================
@@ -537,25 +570,36 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     if ( !itData->GetDataset() ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     string name = itData->GetName();
+    cout << "name : " << name << endl;
     string systName = RemoveSeparator( RemoveVar( name ) );
-      
+
+    cout << "extend" << endl;
     ExtendMapVect( mapPlot, systName, category );
     vector<RooPlot*> *vectPlot = &mapPlot[systName];
+    cout << "adding" << endl;
     if ( !(*vectPlot)[category] ) {
       (*vectPlot)[category] = mapVar["mass"]->frame(115, 135);
       (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
+      cout << "data" << endl;
+      cout << category << "/" << nominalFit.size() << endl;
+      cout << nominalFit[category] << endl;
+      nominalFit[category]->Print();
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
+      cout << "rest" << endl;
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
+      cout << "pdf" << endl;
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
 
     }
     string fluct = ExtractVariable( name );
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
+    cout << "dataset" << endl;
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
+    cout << "pdf" << endl;
     pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
   }
 
