@@ -9,7 +9,9 @@
 #include "PhotonSystematic/ReadMxAOD.h"
 #include "PlotFunctions/DrawPlot.h"
 #include "PlotFunctions/Foncteurs.h"
+#include "PlotFunctions/Arbre.h"
 
+#include "TError.h"
 #include "RooGaussian.h"
 #include "RooDataSet.h"
 #include "RooRealVar.h"
@@ -60,10 +62,11 @@ using std::runtime_error;
 using std::max;
 using std::ostream_iterator;
 using std::bitset;
+using std::to_string;
 using namespace ChrisLib;
 
 void FitTree( const vector<string> &rootFilesName,  string outFileName, const string &inConfFileName ) {
-
+  gErrorIgnoreLevel = 1001;
   string analysis, fitMethod;
   //  vector<string> categoriesName;
   vector<string> vectNPName, systOnly;
@@ -506,9 +509,9 @@ void PrintResult( const list<DataStore> &lDataStore, const string &outFile, cons
      PrintArray( outName, itVar->second, linesName, colsName );
      tablesName.push_back( outName );
    }
+
    cout << "createdatacard" << endl;
-   //   linesName.erase( linesName.begin(), ++linesName.begin() );
-   //   CreateDatacard( tables, categoriesName, linesName, outFile );
+   CreateDatacard( tables, categoriesName, linesName, outFile );
    
  }
 
@@ -570,36 +573,25 @@ void PlotDists( MapPlot &mapPlot, const list<DataStore> &dataStore, const vector
     if ( !itData->GetDataset() ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     string name = itData->GetName();
-    cout << "name : " << name << endl;
     string systName = RemoveSeparator( RemoveVar( name ) );
 
-    cout << "extend" << endl;
     ExtendMapVect( mapPlot, systName, category );
     vector<RooPlot*> *vectPlot = &mapPlot[systName];
-    cout << "adding" << endl;
     if ( !(*vectPlot)[category] ) {
       (*vectPlot)[category] = mapVar["mass"]->frame(115, 135);
       (*vectPlot)[category]->SetTitle( "" );
       (*vectPlot)[category]->SetXTitle( "m_{#gamma#gamma} [GeV]" );
       (*vectPlot)[category]->SetYTitle( TString::Format("Entries / %2.3f GeV", ((*vectPlot)[category]->GetXaxis()->GetXmax()-(*vectPlot)[category]->GetXaxis()->GetXmin())/(*vectPlot)[category]->GetNbinsX()) );
-      cout << "data" << endl;
-      cout << category << "/" << nominalFit.size() << endl;
-      cout << nominalFit[category] << endl;
-      nominalFit[category]->Print();
       nominalFit[category]->GetDataset()->plotOn( (*vectPlot)[category],  RooFit::LineColor(1), RooFit::MarkerColor(1) );
-      cout << "rest" << endl;
       nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-      cout << "pdf" << endl;
       pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(1) );
 
     }
     string fluct = ExtractVariable( name );
     bool isUpFluct = fluct == "1up";
     int color = 1 + ( isUpFluct ? 2 : 1 );
-    cout << "dataset" << endl;
     itData->GetDataset()->plotOn( (*vectPlot)[category], RooFit::LineColor(color), RooFit::MarkerColor(color) );
     itData->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
-    cout << "pdf" << endl;
     pdf->plotOn( (*vectPlot)[category], RooFit::LineColor(color) );
   }
 
@@ -722,28 +714,53 @@ void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<stri
   vector<stringstream> streams( categoriesName.size() );
   for ( unsigned iCol=0; iCol<streams.size(); ++iCol )  streams[iCol] << "[" << categoriesName[iCol] << "]\n";
 
+  Arbre NPCorrelation( "NPCorrelation" );
+
   RooRealVar var( "var", "var", -100 );
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
     for ( unsigned iLine=0; iLine<NPName.size(); ++iLine ) {
       string name = NPName[iLine] + "_" + itTables->first;
+
+      Arbre systematic( "systematic" );
+      systematic.SetAttribute( "centralVal", "1" );
+      systematic.SetAttribute( "correlation", "All" );
+      systematic.SetAttribute( "Name", name );
+      systematic.SetAttribute( "varName", itTables->first );
       for ( unsigned iCol=0; iCol<2*categoriesName.size(); iCol+=2 ) {
 	var.SetName( name.c_str() );
-	cout << ReplaceString( "-", "_" )(name) << endl;
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][iCol+1] ) continue;
-	var.setRange( itTables->second[iLine][iCol]*100, itTables->second[iLine][iCol+1]*100 );
+	double upVal = itTables->second[iLine][iCol+1]*100;
+	double downVal = itTables->second[iLine][iCol]*100;
+
+	//Setting datacard 
+	var.setRange( downVal, upVal );
 	unsigned iCat = iCol/2;
 	ostream &s=streams[iCat];
 	s << name << " = ";
 	var.writeToStream( s, 0 );
 	s << endl;
+
+	//Setting xml
+	Arbre systEffect( "systEffect" );
+	systEffect.SetAttribute( "constraint", "Gauss" );
+	systEffect.SetAttribute( "process", "all" );
+	systEffect.SetAttribute( "upVal", to_string(upVal) );
+	systEffect.SetAttribute( "downVal", to_string(downVal) );
+	systEffect.SetAttribute( "category", categoriesName[iCat] );
+	systematic.AddChild( systEffect );
       }
-    }	
+      NPCorrelation.AddChild( systematic );
+    }//end iLine
   }
 
-  fstream outFileStream( outName + "_datacard.txt", fstream::out );
+  string datacardName = outName + "_datacard";
+  cout << "datacardName : " << datacardName << endl;
+  fstream outFileStream( datacardName+".txt", fstream::out );
   for ( auto it=streams.begin(); it!=streams.end(); ++it ) outFileStream << it->str() << endl;
   outFileStream.close();
+
+  NPCorrelation.WriteToFile( datacardName + ".xml", "/afs/in2p3.fr/home/c/cgoudet/private/Couplings/Workspace/config/xmlCard.dtd" );
 }
 
 //============================================================
@@ -753,3 +770,4 @@ RooDataHist* CreateDataHist( RooAbsData *oldSet ) {
   delete oldSet;
   return  histSet;
 }
+

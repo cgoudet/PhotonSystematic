@@ -27,7 +27,7 @@ void DataStore::Fit( RooAbsPdf *pdf, string fitMethod ) {
     nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false) );
     nll->enableOffsetting( true );
     RooMinimizer *_minuit = new  RooMinimizer(*nll);
-    robustMinimize(*nll, *_minuit, 0) ;
+    robustMinimize(*nll, *_minuit ) ;
   }
 
 }
