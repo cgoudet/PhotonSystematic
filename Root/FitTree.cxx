@@ -723,10 +723,10 @@ void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<stri
       string name = NPName[iLine] + "_" + itTables->first;
 
       Arbre systematic( "systematic" );
-      systematic.SetAttribute( "centralVal", "1" );
+      systematic.SetAttribute( "centralValue", "1" );
       systematic.SetAttribute( "correlation", "All" );
       systematic.SetAttribute( "Name", name );
-      systematic.SetAttribute( "varName", itTables->first );
+
       for ( unsigned iCol=0; iCol<2*categoriesName.size(); iCol+=2 ) {
 	var.SetName( name.c_str() );
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][iCol+1] ) continue;
@@ -743,11 +743,12 @@ void CreateDatacard( map<string,multi_array<double,2>> tables, const vector<stri
 
 	//Setting xml
 	Arbre systEffect( "systEffect" );
-	systEffect.SetAttribute( "constraint", "Gauss" );
+	systEffect.SetAttribute( "constraint", "Asym" );
 	systEffect.SetAttribute( "process", "all" );
 	systEffect.SetAttribute( "upVal", to_string(upVal) );
 	systEffect.SetAttribute( "downVal", to_string(downVal) );
 	systEffect.SetAttribute( "category", categoriesName[iCat] );
+	systEffect.SetAttribute( "varName", itTables->first );
 	systematic.AddChild( systEffect );
       }
       NPCorrelation.AddChild( systematic );
