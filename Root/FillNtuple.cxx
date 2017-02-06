@@ -12,9 +12,11 @@ using std::copy;
 using std::for_each;
 using std::set_difference;
 using std::transform;
+using std::all_of;
 #include <exception>
 using std::ostream_iterator;
 using std::back_inserter;
+using std::runtime_error;
 #include <iterator>
 #include <iostream>
 using std::cout;
@@ -85,25 +87,17 @@ EL::StatusCode FillNtuple::execute()
   // are filled properly.
   HgammaAnalysis::execute();
 
-  // xAOD::PhotonContainer photons = photonHandler()->getCorrectedContainer();
-  // if (photons.size() < 2) return EL::StatusCode::SUCCESS;
-  // TLorentzVector h = photons[0]->p4() + photons[1]->p4();
-  // histoStore()->fillTH1F("m_yy", h.M()/HG::GeV);
+
   for ( auto itVar : m_analysisVariables ) m_branchLinks[itVar] = -99;
 
   int mcID=eventInfo()->mcChannelNumber(); //341000=ggH
-  m_branchLinks["weight"] = lumiXsecWeight(10.,mcID,1) * var::weightCatCoup_dev();
+  m_branchLinks["weight"] = lumiXsecWeight(10.,mcID,1) * var::weightCatCoup_Moriond2017();
+  
   for (auto sys:getSystematics()) {
-    //    if ( m_debug ) cout << "sysName:"<< sys.name() << endl;
     if ( m_containersName.find(sys.name()) == m_containersName.end() ) continue;
-    //    if ( sys.name() == "" ) cout << "emptyString" << endl;
-
-    //    if (sys.name()=="")   sys_nominal=sys; //save it for later purpose : else last systematics would bias results once going back to nominal
-    // if (sys.name()=="") sys_nominal=sys; //save it for later purpose : else last systematics would bias results once going back to nominal
     CP_CHECK("execute()",applySystematicVariation(sys));
-
     FillEntry( sys.name() );
-  }  
+  } 
   m_outTree->Fill();
   
   if ( m_debug==1 ) m_debug=0;
@@ -120,6 +114,7 @@ double FillNtuple::ReweightPtGgh( double const initPt ) {
 
 //==============================================================
 void FillNtuple::DefineContainers( const std::string &containerConfig ) {
+
   vector<string> containersName;
     po::options_description desc("LikelihoodProfiel Usage");
     desc.add_options()
@@ -136,6 +131,11 @@ void FillNtuple::DefineContainers( const std::string &containerConfig ) {
     for ( auto itName : containersName ) m_containersName.insert(itName);
 
     sort( m_commonVarsName.begin(), m_commonVarsName.end() );
+    for ( auto vVar : m_commonVarsName ) {
+      auto it = std::find( m_analysisVariables.begin(), m_analysisVariables.end(), vVar );
+      if ( it==m_analysisVariables.end() ) throw runtime_error( "FillNtuple::DefineContainers : " + vVar + "is not a known variable." );
+    }
+    
     set_difference( m_analysisVariables.begin(), m_analysisVariables.end(), m_commonVarsName.begin(), m_commonVarsName.end(), back_inserter(m_systVarsName) );
 }
 
@@ -150,7 +150,9 @@ void FillNtuple::LinkOutputTree() {
   CombineNames( inCombineNames, outBranchesName );
   outBranchesName.insert( outBranchesName.end(), m_commonVarsName.begin(), m_commonVarsName.end() );
 
-  for ( auto it = outBranchesName.begin(); it!=outBranchesName.end(); ++it ) m_outTree->Branch( it->c_str(), &m_branchLinks[*it] );
+  for ( auto it = outBranchesName.begin(); it!=outBranchesName.end(); ++it ) 
+    m_outTree->Branch( it->c_str(), &m_branchLinks[*it] );
+
 
 }
 
@@ -171,9 +173,10 @@ void FillNtuple::FillLink( const string &inName, const string &outName, const ma
 //==============================================================    
 bool FillNtuple::FillEntry( const string &systName ) {
   map<string,double> vars;
-  vars["m_yy"] = var::m_yy()/1e3;
+  double dummy = var::m_yy();
+  vars["m_yy"] = dummy==-99 ? dummy : dummy/1e3;
   vars["weight"] = var::weight();
-  double dummyVar = var::catCoup_dev();
+  double dummyVar = var::catCoup_Moriond2017();
   vars["catCoup"] = dummyVar==-1 ? -99 : dummyVar;
 
   for ( const string itSyst:m_systVarsName ) {
