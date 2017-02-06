@@ -41,7 +41,7 @@ class FitSystematic {
 
   void FillEventProperties( std::tuple<double,double,int> &event, std::map<std::string,RooRealVar*> &observables, const std::string &branchPrefix );
   static std::string RemoveVar( const std::string &inName );
-  void PlotDists( MapPlot &mapPlot, const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
+  void PlotDists( const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
   
   void PrintResult( const std::string &outFile, std::list<std::string> &tablesName );
 
@@ -52,9 +52,9 @@ class FitSystematic {
   void SaveFitValues( const std::string &outName );
   void CreateDatacard( std::map<std::string,boost::multi_array<double,2>> tables, const std::string &outName );
   void FitMeanHist( const DataStore &data, std::map<std::string,RooRealVar*> &mapVar );
-  void DrawDists( const MapPlot &mapPlot, std::string outName, const std::list<std::string> &tablesName );
+  void DrawDists( std::string outName, const std::list<std::string> &tablesName );
   RooDataHist* CreateDataHist( RooAbsData *oldSet );
-  void FitDatasets( MapPlot &mapPlot, const std::string &outNamePrefix );
+  void FitDatasets( const std::string &outNamePrefix );
   void FillArray( const DataStore &dataStore, const unsigned fluctLine, std::map<std::string,boost::multi_array<double,2>> &array  );
   void Run( const std::vector<std::string> &rootFilesName,  std::string outFileName, const std::string &inConfFileName );
 
@@ -66,6 +66,7 @@ class FitSystematic {
   std::list<std::string> m_NPName;
   std::vector<unsigned> m_catOnly;
   MapSet m_datasets;
+  MapPlot m_plots;
   ChrisLib::MapBranches m_mapBranch;
   std::list<DataStore> m_lDataStore;
   std::vector<std::string> m_categoriesName;

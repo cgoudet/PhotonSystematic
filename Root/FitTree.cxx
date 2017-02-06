@@ -76,7 +76,7 @@ FitSystematic::FitSystematic( const string &confFile ) : FitSystematic() {
 }
 
 void FitSystematic::Configure( const string &confFile ) {
-  //  vector<string> categoriesName;
+  cout << "Configure" << endl;
   vector<string> vectNPName, systOnly, inMergeNP;
   po::options_description configOptions("configOptions");
   configOptions.add_options()
@@ -339,8 +339,8 @@ void FitSystematic::GetCommonVars( list<string> &commonVars ) {
 
 void FitSystematic::Run( const vector<string> &rootFilesName,  string outFileName, const string &inConfFileName ) {
   Configure( inConfFileName );
+  FillDataset( rootFilesName );
   CreateDataStoreList();
-
   if ( outFileName != "" ) {
     outFileName = StripString( outFileName, 0, 1 );
     system( ("mkdir " + outFileName).c_str() );
@@ -348,18 +348,15 @@ void FitSystematic::Run( const vector<string> &rootFilesName,  string outFileNam
   }
   outFileName += "SystVariation";
 
-  MapPlot mapPlot;
-  FitDatasets( mapPlot, outFileName );
+  FitDatasets( outFileName );
 
-
-  
   //Create a directory at the target to hold all results.
 
   list<string> tablesName;
   cout << "Print Results" << endl;
   PrintResult( outFileName, tablesName );
   cout << "DrawDist" << endl;
-  DrawDists( mapPlot, outFileName, tablesName );
+  DrawDists( outFileName, tablesName );
 
 }
 
@@ -455,7 +452,7 @@ void FitSystematic::FillFluctFit( const vector<DataStore*> &nominalFit, RooAbsPd
   }
 }
 //======================================================
-void FitSystematic::FitDatasets( MapPlot &mapPlot, const string &outNamePrefix ) {
+void FitSystematic::FitDatasets( const string &outNamePrefix ) {
 
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), m_fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + m_fitMethod );
@@ -486,9 +483,8 @@ void FitSystematic::FitDatasets( MapPlot &mapPlot, const string &outNamePrefix )
 
   FillFluctFit( nominalFit, pdf, mapVar );
   SaveFitValues( outNamePrefix );
-  cout << "PlotDists : " << endl;
-  PlotDists( mapPlot, nominalFit, pdf, mapVar );
-  cout << "Divide" << endl;
+  PlotDists( nominalFit, pdf, mapVar );
+
   for ( list<DataStore>::iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
     unsigned category = static_cast<unsigned>(itData->GetCategory());
@@ -571,7 +567,7 @@ void FitSystematic::PrintResult( const string &outFile, list<string> &tablesName
  }
 
 //==========================================================
-void FitSystematic::PlotDists( MapPlot &mapPlot, const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
+void FitSystematic::PlotDists( const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
 
   for ( list<DataStore>::const_iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
@@ -580,8 +576,8 @@ void FitSystematic::PlotDists( MapPlot &mapPlot, const vector<DataStore*> &nomin
     string name = itData->GetName();
     string systName = RemoveSeparator( RemoveVar( name ) );
 
-    ExtendMapVect( mapPlot, systName, category );
-    vector<RooPlot*> *vectPlot = &mapPlot[systName];
+    ExtendMapVect( m_plots, systName, category );
+    vector<RooPlot*> *vectPlot = &m_plots[systName];
     if ( !(*vectPlot)[category] ) {
       (*vectPlot)[category] = mapVar["mass"]->frame(115, 135);
       (*vectPlot)[category]->SetTitle( "" );
@@ -603,8 +599,7 @@ void FitSystematic::PlotDists( MapPlot &mapPlot, const vector<DataStore*> &nomin
 
 }
 //==========================================================
-void FitSystematic::DrawDists( const MapPlot &mapPlot, 
-		string outName, 
+void FitSystematic::DrawDists( string outName, 
 		const list<string> &tablesName ) {
 
   map<string,vector<TCanvas*>> mapCan;
@@ -621,7 +616,7 @@ void FitSystematic::DrawDists( const MapPlot &mapPlot,
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     string systName = RemoveSeparator( RemoveVar( name ) );
 
-    const vector<RooPlot*> *vectPlot  = &mapPlot.at(systName);
+    const vector<RooPlot*> *vectPlot  = &m_plots.at(systName);
 
     ExtendMapVect( mapCan, systName, category );
     vector<TCanvas*> *vectCan = &mapCan[systName];
@@ -723,14 +718,19 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables, co
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
     list<string>::const_iterator npName=m_NPName.begin();
-    for ( unsigned iLine=0; iLine<m_NPName.size(); ++iLine ) {
+
+    cout << "tableSize :  " << itTables->second.size() << " " << itTables->second[0].size() << endl;
+    cout << "line : " << m_NPName.size() << endl;
+    cout << "col : " << m_categoriesName.size() << endl;
+    unsigned nLine = ( m_NPName.size()-1)/2;
+    for ( unsigned iLine=0; iLine<nLine; ++iLine ) {
       string name = *npName + "_" + itTables->first;
-
-
+      
       Arbre systematic( "systematic" );
       systematic.SetAttribute( "centralValue", "1" );
       systematic.SetAttribute( "correlation", "All" );
       systematic.SetAttribute( "Name", name );
+
 
       for ( unsigned iCol=0; iCol<2*m_categoriesName.size(); iCol+=2 ) {
 	var.SetName( name.c_str() );
