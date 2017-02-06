@@ -71,7 +71,18 @@ FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings"}, m_fitMe
  gErrorIgnoreLevel = 1001;
 }
 
-FitSystematic::FitSystematic( const string &confFile ) : FitSystematic() {
+FitSystematic::FitSystematic( const string &name ) : FitSystematic() {
+  m_name = name;
+  if ( m_name != "" ) {
+    m_name = StripString( m_name, 0, 1 );
+    system( ("mkdir " + m_name).c_str() );
+    if ( m_name.back() != '/' ) m_name+="/";
+  }
+  m_name += "SystVariation";
+
+}
+
+FitSystematic::FitSystematic( const string &name, const string &confFile ) : FitSystematic( name ) {
   Configure( confFile );
 }
 
@@ -337,26 +348,20 @@ void FitSystematic::GetCommonVars( list<string> &commonVars ) {
 }
 //===
 
-void FitSystematic::Run( const vector<string> &rootFilesName,  string outFileName, const string &inConfFileName ) {
-  Configure( inConfFileName );
+void FitSystematic::Run( const vector<string> &rootFilesName ) {
+
   FillDataset( rootFilesName );
   CreateDataStoreList();
-  if ( outFileName != "" ) {
-    outFileName = StripString( outFileName, 0, 1 );
-    system( ("mkdir " + outFileName).c_str() );
-    if ( outFileName.back() != '/' ) outFileName+="/";
-  }
-  outFileName += "SystVariation";
 
-  FitDatasets( outFileName );
+  FitDatasets();
 
   //Create a directory at the target to hold all results.
 
   list<string> tablesName;
   cout << "Print Results" << endl;
-  PrintResult( outFileName, tablesName );
+  PrintResult( tablesName );
   cout << "DrawDist" << endl;
-  DrawDists( outFileName, tablesName );
+  DrawDists( tablesName );
 
 }
 
@@ -452,7 +457,7 @@ void FitSystematic::FillFluctFit( const vector<DataStore*> &nominalFit, RooAbsPd
   }
 }
 //======================================================
-void FitSystematic::FitDatasets( const string &outNamePrefix ) {
+void FitSystematic::FitDatasets() {
 
   const list<string> allowedFitMethods = GetAllowedFitMethods();
   if (  find(allowedFitMethods.begin(), allowedFitMethods.end(), m_fitMethod) == allowedFitMethods.end() ) throw invalid_argument( "FitTree : Wrong fitMethod provided : " + m_fitMethod );
@@ -482,7 +487,7 @@ void FitSystematic::FitDatasets( const string &outNamePrefix ) {
   }
 
   FillFluctFit( nominalFit, pdf, mapVar );
-  SaveFitValues( outNamePrefix );
+  SaveFitValues();
   PlotDists( nominalFit, pdf, mapVar );
 
   for ( list<DataStore>::iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
@@ -511,7 +516,7 @@ void FitSystematic::FillArray( const DataStore &dataStore, const unsigned fluctL
   
  }  
  //====================================================================
-void FitSystematic::PrintResult( const string &outFile, list<string> &tablesName ) {
+void FitSystematic::PrintResult( list<string> &tablesName ) {
 
    map<string,multi_array<double,2>> tables;
    list<string> variables = GetVariables();
@@ -556,13 +561,12 @@ void FitSystematic::PrintResult( const string &outFile, list<string> &tablesName
    for ( auto itVar = tables.begin(); itVar!=tables.end(); ++itVar ) {
      colsName.front() = ExtractVariable( itVar->first );
      if ( colsName.front() != "mean" && colsName.front()!="sigma" ) continue;
-     string outName = StripString( outFile, 0, 1 ) + "_" + itVar->first +".csv";
+     string outName = StripString( m_name, 0, 1 ) + "_" + itVar->first +".csv";
      PrintArray( outName, itVar->second, linesName, colsName );
      tablesName.push_back( outName );
    }
 
-   cout << "createdatacard" << endl;
-   CreateDatacard( tables, outFile );
+   CreateDatacard( tables );
    
  }
 
@@ -599,8 +603,7 @@ void FitSystematic::PlotDists( const vector<DataStore*> &nominalFit, RooAbsPdf *
 
 }
 //==========================================================
-void FitSystematic::DrawDists( string outName, 
-		const list<string> &tablesName ) {
+void FitSystematic::DrawDists( const list<string> &tablesName ) {
 
   map<string,vector<TCanvas*>> mapCan;
   double meanY=0.82;
@@ -655,7 +658,7 @@ void FitSystematic::DrawDists( string outName,
   }
 
   ReplaceString repStr( "_", "\\_" );
-  outName = StripString( outName, 0, 1 );
+  string outName = StripString( m_name, 0, 1 );
   string texName = outName+"_Plots.tex";
   cout << "writing tex : " << texName << endl;
   fstream stream( texName, fstream::out );
@@ -686,9 +689,9 @@ void FitSystematic::DrawDists( string outName,
 
 }
 //==========================================================
-void FitSystematic::SaveFitValues( const string &outName ) {
+void FitSystematic::SaveFitValues() {
 
-  fstream stream( outName + "_values.csv", fstream::out );
+  fstream stream( m_name + "_values.csv", fstream::out );
   stream << "NP,cat,mean,sigma,alphaHi,alphaLow,nHi,nLow\n";
 
   for ( auto itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
@@ -707,7 +710,7 @@ void FitSystematic::SaveFitValues( const string &outName ) {
 }
 
 //==========================================================
-void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables, const string &outName ) {
+void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 
   vector<stringstream> streams( m_categoriesName.size() );
   for ( unsigned iCol=0; iCol<streams.size(); ++iCol )  streams[iCol] << "[" << m_categoriesName[iCol] << "]\n";
@@ -761,7 +764,7 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables, co
     }//end iLine
   }
 
-  string datacardName = outName + "_datacard";
+  string datacardName = m_name + "_datacard";
   cout << "datacardName : " << datacardName << endl;
   fstream outFileStream( datacardName+".txt", fstream::out );
   for ( auto it=streams.begin(); it!=streams.end(); ++it ) outFileStream << it->str() << endl;

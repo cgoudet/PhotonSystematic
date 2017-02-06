@@ -25,7 +25,10 @@ class FitSystematic {
  public :
 
   FitSystematic();
-  FitSystematic( const std::string &confFile );
+  FitSystematic( const std::string &name );
+  FitSystematic( const std::string &name, const std::string &confFile );
+
+
 
   void Configure( const std::string &confFile );
   void FillDataset( const std::vector<std::string> &rootFilesName );
@@ -43,26 +46,26 @@ class FitSystematic {
   static std::string RemoveVar( const std::string &inName );
   void PlotDists( const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
   
-  void PrintResult( const std::string &outFile, std::list<std::string> &tablesName );
+  void PrintResult( std::list<std::string> &tablesName );
 
   void CreateDataStoreList();
   void FillFluctFit( const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
   void FixParametersMethod ( unsigned int category, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar, const std::string &NPName);
   void FillNominalFit( std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
-  void SaveFitValues( const std::string &outName );
-  void CreateDatacard( std::map<std::string,boost::multi_array<double,2>> tables, const std::string &outName );
+  void SaveFitValues();
+  void CreateDatacard( std::map<std::string,boost::multi_array<double,2>> tables );
   void FitMeanHist( const DataStore &data, std::map<std::string,RooRealVar*> &mapVar );
-  void DrawDists( std::string outName, const std::list<std::string> &tablesName );
+  void DrawDists( const std::list<std::string> &tablesName );
   RooDataHist* CreateDataHist( RooAbsData *oldSet );
-  void FitDatasets( const std::string &outNamePrefix );
+  void FitDatasets();
   void FillArray( const DataStore &dataStore, const unsigned fluctLine, std::map<std::string,boost::multi_array<double,2>> &array  );
-  void Run( const std::vector<std::string> &rootFilesName,  std::string outFileName, const std::string &inConfFileName );
+  void Run( const std::vector<std::string> &rootFilesName );
 
  private :
   unsigned m_nBins;
   std::string m_analysis;
   std::string m_fitMethod;
-
+  std::string m_name;
   std::list<std::string> m_NPName;
   std::vector<unsigned> m_catOnly;
   MapSet m_datasets;
