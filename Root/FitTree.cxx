@@ -66,7 +66,7 @@ using std::to_string;
 using namespace ChrisLib;
 
 
-FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings"}, m_fitMethod{"fitAll_fitExtPOI"}
+FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings33"}, m_fitMethod{"fitAll_fitExtPOI"}, m_debug{0}
 {
  gErrorIgnoreLevel = 1001;
 }
@@ -87,7 +87,6 @@ FitSystematic::FitSystematic( const string &name, const string &confFile ) : Fit
 }
 
 void FitSystematic::Configure( const string &confFile ) {
-  cout << "Configure" << endl;
   vector<string> vectNPName, systOnly, inMergeNP;
   po::options_description configOptions("configOptions");
   configOptions.add_options()
@@ -112,10 +111,16 @@ void FitSystematic::Configure( const string &confFile ) {
   const list<string>  allowedAnalyses = GetAllowedAnalyses();
   if ( find( allowedAnalyses.begin(), allowedAnalyses.end(), m_analysis ) == allowedAnalyses.end() ) throw invalid_argument( "FillDataset : Wrong analysis provided : " + m_analysis );
 
-  if ( m_analysis == "Couplings" ) m_categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
+  if ( m_analysis == "Couplings13" ) m_categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( m_analysis == "DiffXS" ) m_categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( m_analysis == "DiffXSPhi" ) m_categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
+  else m_categoriesName = { "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" };
   
+  for ( auto vMergeLine : inMergeNP ) {
+    vector<string> dumV;
+    ParseVector( vMergeLine, dumV );
+    m_mergeNP[dumV.front()] = dumV.back();
+  }
 }
 
 //===
@@ -150,7 +155,6 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     }
   }
 
-  list<string> commonVars;
   list<string> branchesToLink;
   if ( !m_NPName.empty() ) {
     list<list<string>> inCombine( 2, list<string>());
@@ -162,25 +166,25 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
 
 
   for ( auto &vFileName : rootFilesName ) {
-    cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
     if ( inFile->IsZombie() ) throw invalid_argument( "FitTree : input file does not exist : " + vFileName );
     
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
-    
     m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
-    
+
     if ( branchesToLink.empty() ) {//Optimize the branches to effectively link to gain reading time
       SelectAnalysisBranches( branchesToLink );
       m_mapBranch.ClearMaps();
       m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
-      GetCommonVars( commonVars );
+      GetCommonVars( m_commonVars );
     }
+    
+
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
-      FillEntryDataset( mapCBParameters, catVar, commonVars );
+      FillEntryDataset( mapCBParameters, catVar );
     }//end iEntry
 
     delete inTree;    
@@ -188,23 +192,19 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     delete inFile;
   }//end vFileName
 
-
-
 }
 //===
 void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
-		       const string &catVar,
-		       const list<string> &commonVars
+		       const string &catVar
 		       ) {
+  if ( m_debug ) cout << "FitSystematic::FillEntryDataset\n";
+  bool isCatVarCommon = find( m_commonVars.begin(), m_commonVars.end(), catVar ) != m_commonVars.end();
 
-  bool isCatVarCommon = find( commonVars.begin(), commonVars.end(), catVar ) != commonVars.end();
-  bool doMerging { m_fitMethod.find( "merge" ) != string::npos };
   RooRealVar *weightVar = observables["weight"];
   if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
 
   map<string,tuple<double, double ,int>> eventsPerChannel;
   map<string, list<double> > masses;
-
   /*Needed fot the loop
     catvar
     observables
@@ -214,20 +214,18 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
     string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
     int category = static_cast<int>(m_mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
+    if ( category>33) cout << "category : " << category << endl;
     tuple<double,double,int> currentEvent { 0, 0, category };
 
     // fill mass, weight and category into a tuple
     FillEventProperties( currentEvent, observables, branchPrefix );
 
-    if ( doMerging && branchPrefix.find( "ETABIN" )!= string::npos ) { 
+    if ( !branchPrefix.empty() ) branchPrefix.pop_back();
+    string mergeName = MergedName( *itNPName );
+    if ( mergeName!=*itNPName ) { 
       double mass = std::get<0>(currentEvent);
-      int posEta = branchPrefix.find( "ETABIN" );
-      int posFluct = branchPrefix.find( "__", posEta )+2;//Finds the charcters just after the bin number that can have either 1 or 2 digits
-      string mergeName = branchPrefix.substr( 0, branchPrefix.size()-1 );
-      mergeName.replace(posEta, posFluct-posEta, "" );
       map<string,tuple<double,double,int>>::iterator currentMax = eventsPerChannel.find( mergeName );
       if ( currentMax == eventsPerChannel.end() ) eventsPerChannel[mergeName] = currentEvent;
-      
       map<string,list<double>>::iterator itMasses = masses.find( mergeName );
       if ( itMasses == masses.end() ) masses[mergeName] = { m_mapBranch.GetDouble( "m_yy" ), mass  };
       else itMasses->second.push_back( mass );
@@ -271,7 +269,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
 	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );
     }
   }//end itChannels
-  //  exit(0);
+  if ( m_debug ) cout << "FitSystematic::FillEntryDataset end \n";
 }
 //===
 double FitSystematic::ComputeTotalSystMass( list<double> &masses ) {
@@ -315,11 +313,7 @@ void FitSystematic::GetSystematics( const list<string> &branches, list<string> &
 //===
 void FitSystematic::SelectVariablesAnalysis( list<string> &variables ) {
   variables = { "m_yy" };
-  if ( m_analysis == "Couplings" ) {
-    variables.push_back( "weight" );
-    variables.push_back( "catCoup" );
-  }
-  else if ( m_analysis == "XS" ) {
+  if ( m_analysis == "XS" ) {
     variables.push_back( "weightXS" );
     variables.push_back( "catXS" );
   }    
@@ -327,7 +321,10 @@ void FitSystematic::SelectVariablesAnalysis( list<string> &variables ) {
     variables.push_back( "weightXS" );
     variables.push_back( "catXSPhi" );
   }    
-
+  else {
+    variables.push_back( "weight" );
+    variables.push_back( "catCoup" );
+  }
 }
 //===
 void FitSystematic::GetCommonVars( list<string> &commonVars ) {
@@ -358,9 +355,7 @@ void FitSystematic::Run( const vector<string> &rootFilesName ) {
   //Create a directory at the target to hold all results.
 
   list<string> tablesName;
-  cout << "Print Results" << endl;
   PrintResult( tablesName );
-  cout << "DrawDist" << endl;
   DrawDists( tablesName );
 
 }
@@ -381,27 +376,32 @@ string FitSystematic::RemoveVar( const string &inName ) {
 
 //==============================================
 void FitSystematic::FillEventProperties( tuple<double,double,int> &event, map<string,RooRealVar*> &observables, const string &branchPrefix ) {
-
+  if ( m_debug ) cout << "FitSystematic::FillEventProperties\n";
   for ( auto itObs=observables.begin(); itObs!=observables.end(); ++itObs ) {
     if ( !itObs->second ) continue;
     string title = itObs->second->GetTitle();
-    string branchName = branchPrefix+title;
+    bool isCommon = find( m_commonVars.begin(), m_commonVars.end(), title) != m_commonVars.end();
+    string branchName = (isCommon ? "":branchPrefix)+title;
     double value = m_mapBranch.GetDouble(branchName);
     if ( title == "m_yy" ) std::get<0>(event) = value;
     else std::get<1>(event) = value;
     }// end itObs
-
+  if ( m_debug ) cout << "FitSystematic::FillEventProperties end\n";
 }
 
 //======================================================
 void FitSystematic::CreateDataStoreList() {
   m_lDataStore.clear();
+  unsigned maxCat=0;
   for ( MapSet::const_iterator itMapSet = m_datasets.begin(); itMapSet!=m_datasets.end(); ++itMapSet ) {
+    maxCat = std::max( maxCat, static_cast<unsigned>(itMapSet->second.size())-1 );
     for ( unsigned int iCat = 0; iCat < itMapSet->second.size(); ++iCat ) {
 	if ( !itMapSet->second[iCat] ) continue;
 	m_lDataStore.push_back( DataStore( itMapSet->first, iCat, itMapSet->second[iCat] ) );
     }
   }
+  if ( maxCat>=m_categoriesName.size() ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
+
 }
 //====================================================================
 void FitSystematic::FitMeanHist( const DataStore &data, map<string,RooRealVar*> &mapVar ) {
@@ -604,7 +604,7 @@ void FitSystematic::PlotDists( const vector<DataStore*> &nominalFit, RooAbsPdf *
 }
 //==========================================================
 void FitSystematic::DrawDists( const list<string> &tablesName ) {
-
+  if ( m_debug ) cout << "FitSystematic::DrawDists " << endl;
   map<string,vector<TCanvas*>> mapCan;
   double meanY=0.82;
   double sigmaY=0.78;
@@ -614,7 +614,6 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
   for ( list<DataStore>::const_iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     string name = itData->GetName();
     if ( name == "" ) continue;
-
 
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     string systName = RemoveSeparator( RemoveVar( name ) );
@@ -629,7 +628,6 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
       (*vectCan)[category]->SetRightMargin(0.01);
       (*vectPlot)[category]->SetMaximum( (*vectPlot)[category]->GetMaximum()*1.3 );     
       (*vectPlot)[category]->Draw();
-
       ATLASLabel( 0.16, 0.9, "Work In Progress", 1, 0.05 );
       myText( 0.16, 0.85, 1, "Simulation", 0.04 );
       //myText( 0.16, 0.8, 1, "#sqrt{s}=13TeV, L=1.00 fb^{-1}", 0.04 );
@@ -644,7 +642,6 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
       myText( 2*upX-downX, 2*meanY-sigmaY, 1, "\\%" );
     }
     else (*vectCan)[category]->cd();
-
     bool isUpFluct = ExtractVariable( name ) == "1up" ;
     if ( itData->GetMean() ) {
       if ( isUpFluct ) myText( 0.5, meanY, 1, "mean" );
@@ -687,6 +684,7 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
   string commandLine = "pdflatex -interaction=batchmode " + StripString(texName);
   system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
 
+  if ( m_debug ) cout << "FitSystematic::DrawDists end" << endl;
 }
 //==========================================================
 void FitSystematic::SaveFitValues() {
@@ -722,11 +720,7 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
     list<string>::const_iterator npName=m_NPName.begin();
 
-    cout << "tableSize :  " << itTables->second.size() << " " << itTables->second[0].size() << endl;
-    cout << "line : " << m_NPName.size() << endl;
-    cout << "col : " << m_categoriesName.size() << endl;
-    unsigned nLine = ( m_NPName.size()-1)/2;
-    for ( unsigned iLine=0; iLine<nLine; ++iLine ) {
+    for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
       string name = *npName + "_" + itTables->first;
       
       Arbre systematic( "systematic" );
@@ -781,3 +775,17 @@ RooDataHist* FitSystematic::CreateDataHist( RooAbsData *oldSet ) {
   return  histSet;
 }
 
+
+//=============================================================
+string FitSystematic::MergedName( const string &NPName ) {
+
+  auto posFluct = NPName.find( "__1up" );
+  if ( posFluct ==string::npos ) posFluct = NPName.find( "__1down" );
+  if ( posFluct ==string::npos ) return NPName;
+  string prefix = NPName.substr( 0, posFluct );
+  string suffix = NPName.substr( posFluct );
+  auto it = m_mergeNP.find( prefix );
+  if ( it == m_mergeNP.end() ) return NPName;
+  prefix = it->second.substr( 0, it->second.find("__"));
+  return prefix+suffix;
+}

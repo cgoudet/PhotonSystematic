@@ -273,7 +273,15 @@ def plotTest( dirPrefix, testID ) :
     print( fluctList )
     return listPlots
 
-
+def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
+"""
+Create the boost config file for a category and for a variable
+"""
+#==========================================
+def CompareFit( directories ) :
+"""
+Read the CSV output files from FitSystematic and plot total 
+"""
 #==========================================
 def parseArgs():
     """

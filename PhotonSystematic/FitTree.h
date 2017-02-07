@@ -33,12 +33,11 @@ class FitSystematic {
   void Configure( const std::string &confFile );
   void FillDataset( const std::vector<std::string> &rootFilesName );
   void FillEntryDataset( std::map<std::string,RooRealVar*> &observables,
-			 const std::string &catVar,
-			 const std::list<std::string> &commonVars
+			 const std::string &catVar
 		       );
   double ComputeTotalSystMass( std::list<double> &masses );
   void SelectAnalysisBranches( std::list<std::string> &branchesOfInterest );
-  void GetSystematics( const std::list<std::string> &branches, std::list<std::string> &systs ); 
+  static void GetSystematics( const std::list<std::string> &branches, std::list<std::string> &systs ); 
   void SelectVariablesAnalysis( std::list<std::string> &variables );
   void GetCommonVars( std::list<std::string> &commonVars ); 
 
@@ -47,7 +46,7 @@ class FitSystematic {
   void PlotDists( const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
   
   void PrintResult( std::list<std::string> &tablesName );
-
+  void SetDebug( int debug ) { m_debug=debug; }
   void CreateDataStoreList();
   void FillFluctFit( const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
   void FixParametersMethod ( unsigned int category, const std::vector<DataStore*> &nominalFit, std::map<std::string,RooRealVar*> &mapVar, const std::string &NPName);
@@ -61,18 +60,24 @@ class FitSystematic {
   void FillArray( const DataStore &dataStore, const unsigned fluctLine, std::map<std::string,boost::multi_array<double,2>> &array  );
   void Run( const std::vector<std::string> &rootFilesName );
 
+  std::string MergedName( const std::string &NPName );
+
  private :
   unsigned m_nBins;
   std::string m_analysis;
   std::string m_fitMethod;
   std::string m_name;
   std::list<std::string> m_NPName;
+  std::list<std::string> m_commonVars;
   std::vector<unsigned> m_catOnly;
   MapSet m_datasets;
   MapPlot m_plots;
   ChrisLib::MapBranches m_mapBranch;
   std::list<DataStore> m_lDataStore;
   std::vector<std::string> m_categoriesName;
+
+  std::map<std::string, std::string> m_mergeNP;
+  int m_debug;
 };
 
 /* void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly, MapPlot &mapPlot, const std::string &outNamePrefix ); */
@@ -81,7 +86,7 @@ class FitSystematic {
 
 
 inline const std::list<std::string> &GetAllowedAnalyses() {
-  static const std::list<std::string> allowedAnalyses = {"Couplings", "DiffXS", "DiffXSPhi" };
+  static const std::list<std::string> allowedAnalyses = {"Couplings33","Couplings13", "DiffXS", "DiffXSPhi" };
   return allowedAnalyses;
 }
 
