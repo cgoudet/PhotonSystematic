@@ -279,6 +279,8 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     Create the boost config file for a category and for a variable
     """
     directory = AddSlash(directory)
+    labelDir = StripString(directory[:-1], 1, 0 )
+
     do = DrawOptions()
     do.AddOption( 'inputType', '1' )
 
@@ -287,11 +289,11 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ] ] 
 
     do.AddOption( 'latex','mean' )
-    do.AddOption( 'latexOpt','0.4 0.95' )
+    do.AddOption( 'latexOpt','0.16 0.92' )
     do.AddOption( 'latex','Inclusive' )
-    do.AddOption( 'latexOpt','0.4 0.91' )
-    do.AddOption( 'latex','FULL' )
-    do.AddOption( 'latexOpt','0.16 0.95' )
+    do.AddOption( 'latexOpt','0.16 0.88' )
+    do.AddOption( 'latex', labelDir )
+    do.AddOption( 'latexOpt','0.16 0.96' )
     do.AddOption( 'legend','Up : tot=__OPLUS' )
     do.AddOption( 'legend','Down : tot=__OPLUS' )
     do.AddOption( 'legendPos','0.7 0.95' )
@@ -300,23 +302,30 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     do.AddOption( 'grid','1' )
     do.AddOption( 'forceStyle','0' )
     do.AddOption( 'clean','0' )
+    do.AddOption( 'line','0' )
     do.AddOption( 'drawStyle','2' )
     do.AddOption( 'topMargin','0.15' )
     do.AddOption( 'bottomMargin','0.3' )
     do.AddOption( 'plotDirectory',''+directory )
 
-    fileName=directory+'Systematics_' + variable + '.boost'
+    fileName=directory+'Systematics_' + category + '_'+ variable + '.boost'
     do.WriteToFile( fileName )
     return fileName
 #==========================================
-def CompareFit( directories ) :
+def CompareFit( directory ) :
     """
     Read the CSV output files from FitSystematic and plot total 
     """
-    categories = [ 'Inclusive' ]
+    directory = AddSlash(directory)
+    categories = [ 'Inclusive', "ggH-CenLow", "ggH-CenHigh", "ggH-FwdLow", "ggH-FwdHigh", "VBFloose", "VBFtight", "VHhad-loose", "VHhad-tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
     variables = [ 'mean', 'sigma' ]
-    [ os.system( 'PlotDist ' + SystModelBoost( vDir, vCat, vVar ) ) for vDir in directories for vCat in categories for vVar in variables ] 
-    
+
+    boostFiles = [ SystModelBoost( directory, vCat, vVar ) for vCat in categories for vVar in variables ]
+    [ os.system( 'PlotDist ' + vFile ) for vFile in boostFiles ]
+
+    for vVar in variables : boostFiles = [ vFile.replace( vVar+'.boost', vVar+'_'+vVar+'.pdf' ) for vFile in boostFiles ]
+    print( boostFiles )
+    os.system( 'pdfjoin ' + ' '.join(boostFiles) + ' --outfile ' + directory + 'Systematics.pdf' )
 #==========================================
 def parseArgs():
     """
@@ -347,7 +356,7 @@ def main():
     # Parsing the command line arguments
     args = parseArgs()
 
-    if args.mode==0 : CompareFit( args.directories )
+    if args.mode==0 : [ CompareFit( vDir ) for vDir in args.directories ]
     # Now args is a argparse.NameSpace object
     # It is basically a dictionnary in which you can access its element 
     # as attributes instead of the quite heavy args['entry_name'] dict way.

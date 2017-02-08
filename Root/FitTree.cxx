@@ -166,6 +166,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
 
 
   for ( auto &vFileName : rootFilesName ) {
+    cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
     if ( inFile->IsZombie() ) throw invalid_argument( "FitTree : input file does not exist : " + vFileName );
     
@@ -400,7 +401,7 @@ void FitSystematic::CreateDataStoreList() {
 	m_lDataStore.push_back( DataStore( itMapSet->first, iCat, itMapSet->second[iCat] ) );
     }
   }
-  if ( maxCat>=m_categoriesName.size() ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
+  if ( maxCat!=m_categoriesName.size()-1 ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
 
 }
 //====================================================================
