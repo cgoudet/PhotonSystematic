@@ -8,7 +8,7 @@ import os
 #sys.path.append(os.path.abspath("/afs/in2p3.fr/home/c/cgoudet/private/Calibration/PlotFunctions/python"))
 sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/PlotFunctions/python"))
 from SideFunction import *
-
+from DrawOptions import *
 categoriesNames=[ "Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
 
 #==========================================
@@ -273,15 +273,50 @@ def plotTest( dirPrefix, testID ) :
     print( fluctList )
     return listPlots
 
+#====================================================
 def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
-"""
-Create the boost config file for a category and for a variable
-"""
+    """
+    Create the boost config file for a category and for a variable
+    """
+    directory = AddSlash(directory)
+    do = DrawOptions()
+    do.AddOption( 'inputType', '1' )
+
+    do.AddOption( 'varName',variable)
+    [ do.AddOption( 'rootFileName',directory+'SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
+    [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ] ] 
+
+    do.AddOption( 'latex','mean' )
+    do.AddOption( 'latexOpt','0.4 0.95' )
+    do.AddOption( 'latex','Inclusive' )
+    do.AddOption( 'latexOpt','0.4 0.91' )
+    do.AddOption( 'latex','FULL' )
+    do.AddOption( 'latexOpt','0.16 0.95' )
+    do.AddOption( 'legend','Up : tot=__OPLUS' )
+    do.AddOption( 'legend','Down : tot=__OPLUS' )
+    do.AddOption( 'legendPos','0.7 0.95' )
+    do.AddOption( 'doLabels','1' )
+    do.AddOption( 'saveRoot','1' )
+    do.AddOption( 'grid','1' )
+    do.AddOption( 'forceStyle','0' )
+    do.AddOption( 'clean','0' )
+    do.AddOption( 'drawStyle','2' )
+    do.AddOption( 'topMargin','0.15' )
+    do.AddOption( 'bottomMargin','0.3' )
+    do.AddOption( 'plotDirectory',''+directory )
+
+    fileName=directory+'Systematics_' + variable + '.boost'
+    do.WriteToFile( fileName )
+    return fileName
 #==========================================
 def CompareFit( directories ) :
-"""
-Read the CSV output files from FitSystematic and plot total 
-"""
+    """
+    Read the CSV output files from FitSystematic and plot total 
+    """
+    categories = [ 'Inclusive' ]
+    variables = [ 'mean', 'sigma' ]
+    [ os.system( 'PlotDist ' + SystModelBoost( vDir, vCat, vVar ) ) for vDir in directories for vCat in categories for vVar in variables ] 
+    
 #==========================================
 def parseArgs():
     """
@@ -294,13 +329,13 @@ def parseArgs():
     # First create a parser with a short description of the program.
     # The parser will automatically handle the usual stuff like the --help messages.
     parser = argparse.ArgumentParser(
-        description="This program will plot the comparison of fitted values of CB parameters for different method of systematic fit.")
+        description="")
     # Here I give the short and the long argument name
     parser.add_argument(
-        '--testID', help='Choose the testID to plot. testID description is in utils/TestSyst. 0 do all systematics',
+        '--mode', help='',
         default=0, type=int )
 
-    parser.add_argument('--directory', type=str, help="Directory prefix", default='/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/h013' )
+    parser.add_argument('directories', type=str, help="", nargs='*' )
     args = parser.parse_args()
     return args
 
@@ -311,12 +346,14 @@ def main():
     """
     # Parsing the command line arguments
     args = parseArgs()
+
+    if args.mode==0 : CompareFit( args.directories )
     # Now args is a argparse.NameSpace object
     # It is basically a dictionnary in which you can access its element 
     # as attributes instead of the quite heavy args['entry_name'] dict way.
 
-    plotsForSlides = plotTest( args.directory, args.testID );
-    os.system( 'pdfjoin ' + ' '.join( [ ' '.join( line ) for line in plotsForSlides ] ) + ' --outfile PhotonSyst_merged_testID' + str( args.testID) + '.pdf ' )
+    # plotsForSlides = plotTest( args.directory, args.testID );
+    # os.system( 'pdfjoin ' + ' '.join( [ ' '.join( line ) for line in plotsForSlides ] ) + ' --outfile PhotonSyst_merged_testID' + str( args.testID) + '.pdf ' )
 #    CreateLatex( '', plotsForSlides )
  #   print( "Parsed : ")
 #    for opt in args.__dict__: print(opt, getattr(args, opt))
