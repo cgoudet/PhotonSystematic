@@ -288,9 +288,9 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     [ do.AddOption( 'rootFileName',directory+'SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
     [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ] ] 
 
-    do.AddOption( 'latex','mean' )
+    do.AddOption( 'latex', variable )
     do.AddOption( 'latexOpt','0.16 0.92' )
-    do.AddOption( 'latex','Inclusive' )
+    do.AddOption( 'latex',category )
     do.AddOption( 'latexOpt','0.16 0.88' )
     do.AddOption( 'latex', labelDir )
     do.AddOption( 'latexOpt','0.16 0.96' )
@@ -304,11 +304,12 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     do.AddOption( 'clean','0' )
     do.AddOption( 'line','0' )
     do.AddOption( 'drawStyle','2' )
+    do.AddOption( 'xTitle','NP' )
+    do.AddOption( 'yTitle','uncertainty' )
     do.AddOption( 'topMargin','0.15' )
     do.AddOption( 'bottomMargin','0.3' )
     do.AddOption( 'plotDirectory',''+directory )
-
-    fileName=directory+'Systematics_' + category + '_'+ variable + '.boost'
+    fileName=directory+labelDir+'_Systematics_' + category + '_'+ variable + '.boost'
     do.WriteToFile( fileName )
     return fileName
 #==========================================
@@ -318,6 +319,7 @@ def CompareFit( directory ) :
     """
     directory = AddSlash(directory)
     categories = [ 'Inclusive', "ggH-CenLow", "ggH-CenHigh", "ggH-FwdLow", "ggH-FwdHigh", "VBFloose", "VBFtight", "VHhad-loose", "VHhad-tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
+    if 'h014' in directory : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
     variables = [ 'mean', 'sigma' ]
 
     boostFiles = [ SystModelBoost( directory, vCat, vVar ) for vCat in categories for vVar in variables ]

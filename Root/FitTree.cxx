@@ -72,14 +72,13 @@ FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings33"}, m_fit
 }
 
 FitSystematic::FitSystematic( const string &name ) : FitSystematic() {
-  m_name = name;
+  m_name = AddSlash(name);
   if ( m_name != "" ) {
     m_name = StripString( m_name, 0, 1 );
     system( ("mkdir " + m_name).c_str() );
-    if ( m_name.back() != '/' ) m_name+="/";
   }
-  m_name += "SystVariation";
-
+  string labelDir = StripString( m_name.substr( 0, m_name.size()-1), 1, 0 );
+  m_name += labelDir+"_SystVariation";
 }
 
 FitSystematic::FitSystematic( const string &name, const string &confFile ) : FitSystematic( name ) {
@@ -716,14 +715,18 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 
   Arbre NPCorrelation( "NPCorrelation" );
 
-  RooRealVar var( "var", "var", -100 );
+  vector<string> npName;
+  copy_if( m_NPName.begin(), m_NPName.end(), back_inserter(npName), []( const string &s ){ return (s.find("__1up")!=string::npos); } );
+
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
-    list<string>::const_iterator npName=m_NPName.begin();
 
+    if ( itTables->second.size() != npName.size() ) throw runtime_error( "FitSystematic::CreateDatacard : Not same number of NP between table and NPNames ("+to_string(itTables->second.size())+"/"+to_string(npName.size()) );
     for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
-      string name = *npName + "_" + itTables->first;
-      
+
+      string name = "ATLAS_" + ReplaceString("__1up", "")(npName[iLine])+"_Moriond2017";
+      if ( itTables->first == "mean" && name.find("SCALE")==string::npos
+	   || itTables->first == "sigma" && name.find("RESOLUTION")==string::npos ) continue;
       Arbre systematic( "systematic" );
       systematic.SetAttribute( "centralValue", "1" );
       systematic.SetAttribute( "correlation", "All" );
@@ -731,7 +734,10 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 
 
       for ( unsigned iCol=0; iCol<2*m_categoriesName.size(); iCol+=2 ) {
-	var.SetName( name.c_str() );
+	string nameCat = name + "_" + m_categoriesName[iCol/2];
+	cout << "nameCat : " << nameCat << endl;
+	RooRealVar var( nameCat.c_str(), nameCat.c_str(), -100 );
+
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][iCol+1] ) continue;
 	double upVal = itTables->second[iLine][iCol+1]*100;
 	double downVal = itTables->second[iLine][iCol]*100;
@@ -740,7 +746,7 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 	var.setRange( downVal, upVal );
 	unsigned iCat = iCol/2;
 	ostream &s=streams[iCat];
-	s << name << " = ";
+	s << var.GetName() << " = ";
 	var.writeToStream( s, 0 );
 	s << endl;
 
@@ -755,7 +761,6 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 	systematic.AddChild( systEffect );
       }
       NPCorrelation.AddChild( systematic );
-      ++npName;
     }//end iLine
   }
 
