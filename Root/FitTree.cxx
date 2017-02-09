@@ -725,13 +725,12 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
     for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
 
       string name = "ATLAS_" + ReplaceString("__1up", "")(npName[iLine])+"_Moriond2017";
-      if ( itTables->first == "mean" && name.find("SCALE")==string::npos
-	   || itTables->first == "sigma" && name.find("RESOLUTION")==string::npos ) continue;
+      if ( (itTables->first == "mean" && name.find("SCALE")==string::npos)
+	   || (itTables->first == "sigma" && name.find("RESOLUTION")==string::npos) ) continue;
       Arbre systematic( "systematic" );
       systematic.SetAttribute( "centralValue", "1" );
       systematic.SetAttribute( "correlation", "All" );
       systematic.SetAttribute( "Name", name );
-
 
       for ( unsigned iCol=0; iCol<2*m_categoriesName.size(); iCol+=2 ) {
 	string nameCat = name + "_" + m_categoriesName[iCol/2];
