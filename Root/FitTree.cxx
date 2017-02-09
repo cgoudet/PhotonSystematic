@@ -120,6 +120,8 @@ void FitSystematic::Configure( const string &confFile ) {
     ParseVector( vMergeLine, dumV );
     m_mergeNP[dumV.front()] = dumV.back();
   }
+
+  sort( m_catOnly.begin(), m_catOnly.end() );
 }
 
 //===
@@ -178,8 +180,6 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
       m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
       GetCommonVars( m_commonVars );
     }
-    
-
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
@@ -392,8 +392,10 @@ void FitSystematic::FillEventProperties( tuple<double,double,int> &event, map<st
 //======================================================
 void FitSystematic::CreateDataStoreList() {
   m_lDataStore.clear();
+  m_NPName.clear();
   unsigned maxCat=0;
   for ( MapSet::const_iterator itMapSet = m_datasets.begin(); itMapSet!=m_datasets.end(); ++itMapSet ) {
+    m_NPName.push_back( itMapSet->first );
     maxCat = std::max( maxCat, static_cast<unsigned>(itMapSet->second.size())-1 );
     for ( unsigned int iCat = 0; iCat < itMapSet->second.size(); ++iCat ) {
 	if ( !itMapSet->second[iCat] ) continue;
@@ -526,6 +528,7 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    int nCats=-1;
    vector<string> linesName;
    for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
+     cout << "NPName : " << itDataStore->GetName() << endl;
      string systName = RemoveSeparator( RemoveVar( itDataStore->GetName() ), "_" );
      if ( systName == "" ) continue;
      nCats = max( nCats, itDataStore->GetCategory() );
@@ -709,22 +712,21 @@ void FitSystematic::SaveFitValues() {
 
 //==========================================================
 void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
-
+  cout << "FitSystematic::CreateDatacard" << endl;
   vector<stringstream> streams( m_categoriesName.size() );
   for ( unsigned iCol=0; iCol<streams.size(); ++iCol )  streams[iCol] << "[" << m_categoriesName[iCol] << "]\n";
 
   Arbre NPCorrelation( "NPCorrelation" );
-
   vector<string> npName;
   copy_if( m_NPName.begin(), m_NPName.end(), back_inserter(npName), []( const string &s ){ return (s.find("__1up")!=string::npos); } );
+  transform( npName.begin(), npName.end(), npName.begin(), ReplaceString("__1up"));
 
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
+    cout << "npNameSize : " << npName.size() << " " << itTables->second.size() << endl;
 
-    if ( itTables->second.size() != npName.size() ) throw runtime_error( "FitSystematic::CreateDatacard : Not same number of NP between table and NPNames ("+to_string(itTables->second.size())+"/"+to_string(npName.size()) );
     for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
-
-      string name = "ATLAS_" + ReplaceString("__1up", "")(npName[iLine])+"_Moriond2017";
+      string name = "ATLAS_" + npName[iLine] + "_Moriond2017";
       if ( (itTables->first == "mean" && name.find("SCALE")==string::npos)
 	   || (itTables->first == "sigma" && name.find("RESOLUTION")==string::npos) ) continue;
       Arbre systematic( "systematic" );
@@ -732,19 +734,20 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
       systematic.SetAttribute( "correlation", "All" );
       systematic.SetAttribute( "Name", name );
 
-      for ( unsigned iCol=0; iCol<2*m_categoriesName.size(); iCol+=2 ) {
-	string nameCat = name + "_" + m_categoriesName[iCol/2];
-	cout << "nameCat : " << nameCat << endl;
+      for ( unsigned iCol=0; iCol<m_catOnly.size(); ++iCol ) {
+	unsigned currentCat = m_catOnly[iCol];
+	string nameCat = name + "_" + m_categoriesName[currentCat];
 	RooRealVar var( nameCat.c_str(), nameCat.c_str(), -100 );
 
-	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][iCol+1] ) continue;
-	double upVal = itTables->second[iLine][iCol+1]*100;
-	double downVal = itTables->second[iLine][iCol]*100;
+	cout << "iCol : " << iCol+1 << " " << itTables->second[iLine].size() << endl;
+	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][2*iCol+1] ) continue;
+
+	double upVal = itTables->second[iLine][2*iCol+1]*100;
+	double downVal = itTables->second[iLine][2*iCol]*100;
 
 	//Setting datacard 
 	var.setRange( downVal, upVal );
-	unsigned iCat = iCol/2;
-	ostream &s=streams[iCat];
+	ostream &s=streams[currentCat];
 	s << var.GetName() << " = ";
 	var.writeToStream( s, 0 );
 	s << endl;
@@ -755,7 +758,7 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 	systEffect.SetAttribute( "process", "all" );
 	systEffect.SetAttribute( "upVal", to_string(upVal) );
 	systEffect.SetAttribute( "downVal", to_string(downVal) );
-	systEffect.SetAttribute( "category", m_categoriesName[iCat] );
+	systEffect.SetAttribute( "category", m_categoriesName[currentCat] );
 	systEffect.SetAttribute( "varName", itTables->first );
 	systematic.AddChild( systEffect );
       }
