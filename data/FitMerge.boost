@@ -1,8 +1,6 @@
 fitMethod=fitAll_fitExtPOI_range20
 analysis=Couplings13
 
-catOnly=0
-
 mergeNP=EG_SCALE_S12__ETABIN0  EG_SCALE_S12_BARREL
 mergeNP=EG_SCALE_S12__ETABIN1  EG_SCALE_S12_BARREL
 mergeNP=EG_SCALE_S12__ETABIN2  EG_SCALE_S12_BARREL

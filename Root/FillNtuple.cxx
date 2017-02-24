@@ -90,8 +90,6 @@ EL::StatusCode FillNtuple::execute()
 
   for ( auto itVar : m_analysisVariables ) m_branchLinks[itVar] = -99;
 
-  //  int mcID=eventInfo()->mcChannelNumber(); //341000=ggH
-  //
   m_branchLinks["weight"] = lumiXsecWeight(10.) * var::weightCatCoup_Moriond2017();
   
   for (auto sys:getSystematics()) {

@@ -285,7 +285,7 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     do.AddOption( 'inputType', '1' )
 
     do.AddOption( 'varName',variable)
-    [ do.AddOption( 'rootFileName',directory+'SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
+    [ do.AddOption( 'rootFileName',directory+labelDir+'_SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
     [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ] ] 
 
     do.AddOption( 'latex', variable )
@@ -326,8 +326,9 @@ def CompareFit( directory ) :
     [ os.system( 'PlotDist ' + vFile ) for vFile in boostFiles ]
 
     for vVar in variables : boostFiles = [ vFile.replace( vVar+'.boost', vVar+'_'+vVar+'.pdf' ) for vFile in boostFiles ]
-    print( boostFiles )
-    os.system( 'pdfjoin ' + ' '.join(boostFiles) + ' --outfile ' + directory + 'Systematics.pdf' )
+
+    labelDir = StripString(directory[:-1], 1, 0 )
+    os.system( 'pdfjoin ' + ' '.join(boostFiles) + ' --outfile ' + directory + labelDir +'_Systematics.pdf' )
 #==========================================
 def parseArgs():
     """

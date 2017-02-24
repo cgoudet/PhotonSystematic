@@ -528,7 +528,6 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    int nCats=-1;
    vector<string> linesName;
    for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
-     cout << "NPName : " << itDataStore->GetName() << endl;
      string systName = RemoveSeparator( RemoveVar( itDataStore->GetName() ), "_" );
      if ( systName == "" ) continue;
      nCats = max( nCats, itDataStore->GetCategory() );
@@ -723,7 +722,6 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
-    cout << "npNameSize : " << npName.size() << " " << itTables->second.size() << endl;
 
     for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
       string name = "ATLAS_" + npName[iLine] + "_Moriond2017";
@@ -739,7 +737,6 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 	string nameCat = name + "_" + m_categoriesName[currentCat];
 	RooRealVar var( nameCat.c_str(), nameCat.c_str(), -100 );
 
-	cout << "iCol : " << iCol+1 << " " << itTables->second[iLine].size() << endl;
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][2*iCol+1] ) continue;
 
 	double upVal = itTables->second[iLine][2*iCol+1]*100;
