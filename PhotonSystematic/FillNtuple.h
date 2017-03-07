@@ -37,7 +37,7 @@ private:
   bool FillEntry( const std::string &systName );//!
   void FillLink( const std::string &inName, const std::string &outName, const std::map<std::string,double> &vars ); //!
 
-  const std::list<std::string> m_analysisVariables { "catCoup", "m_yy", "weight"  }; //!
+  const std::list<std::string> m_analysisVariables { "catCoup", "m_yy", "weight", "catCoupBDT"  }; //!
   const std::list<std::string> m_processes { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
   //  static const std::list<std::string> vect = { "DPhi_yy","catCoup","catXS","catXSPhi","m_yy", "pt_yy","weight","weightXS"};
 
@@ -55,5 +55,8 @@ public:
   // this is needed to distribute the algorithm to the workers
   ClassDef(FillNtuple, 1);
 };
+
+
+
 
 #endif // PhotonSystematic_FillNtuple_H

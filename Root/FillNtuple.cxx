@@ -158,14 +158,14 @@ void FillNtuple::LinkOutputTree() {
 //==============================================================
 void FillNtuple::FillLink( const string &inName, const string &outName, const map<string,double> &vars ) {
   map<string,double>::iterator citVarVal = m_branchLinks.find(outName);
-  map<string,double>::const_iterator citLocalVal = vars.find(inName);
-  if ( m_debug==1 ) {
-    assert( citVarVal!=m_branchLinks.end() );
-    assert( citLocalVal!=vars.end() );
+
+  if ( m_debug==1 ) assert( citVarVal!=m_branchLinks.end() );
+  if ( inName!=outName || citVarVal->second == -99 ) {
+
+    map<string,double>::const_iterator citLocalVal = vars.find(inName);
+    if ( m_debug==1 ) assert( citLocalVal!=vars.end() );
+    citVarVal->second = citLocalVal->second;
   }
-  if ( inName!=outName 
-       || citVarVal->second == -99 
-       ) citVarVal->second = citLocalVal->second;
 
 }
 
@@ -177,11 +177,14 @@ bool FillNtuple::FillEntry( const string &systName ) {
   vars["weight"] = var::weight();
   double dummyVar = var::catCoup_Moriond2017();
   vars["catCoup"] = dummyVar==-1 ? -99 : dummyVar;
+  dummyVar = var::catCoup_Moriond2017BDT();
+  vars["catCoupBDT"] = dummyVar==-1 ? -99 : dummyVar;
 
   for ( const string itSyst:m_systVarsName ) {
     const string outName { ( systName =="" ? "" : systName+"_") +itSyst };
     FillLink( itSyst, outName, vars );
   }
   for ( const string itCommon:m_commonVarsName ) FillLink( itCommon, itCommon, vars );
+
   return true;
 }

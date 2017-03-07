@@ -9,11 +9,15 @@ class DataStore {
  public :
   DataStore( std::string name="", int category=-1, RooAbsData* dataset =0 );
 
+  bool operator<(const DataStore &a ) const { return m_name<a.GetName(); }
+
   void Divide( const DataStore &dataStore );
-  void Fit( RooAbsPdf *pdf, std::string fitMethod );
+  void Fit( RooAbsPdf *pdf );
   void FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow );
   void ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alphaHi, RooRealVar* alphaLow, RooRealVar* nHi, RooRealVar* nLow ) const;
   void Print(); 
+
+  void QuadSum( const DataStore &store );
 
   double GetAlphaHi() const { return m_alphaHi; }
   double GetAlphaLow() const { return m_alphaLow; }
@@ -26,6 +30,8 @@ class DataStore {
   double GetSigma() const { return m_sigma; }
 
   void SetDataset( RooAbsData* dataset ) { m_dataset = dataset; }
+  void SetName( const std::string &name ) { m_name = name; }
+
  private :
   RooAbsData* m_dataset;
   int m_category;

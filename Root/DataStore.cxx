@@ -1,29 +1,29 @@
 #include "PhotonSystematic/DataStore.h"
 #include "PlotFunctions/RobustMinimize.h"
+#include "PlotFunctions/SideFunctionsTpp.h"
 #include "RooAbsReal.h"
 #include "RooDataSet.h"
 #include "RooAbsPdf.h"
 
 #include <iostream>
+#include <list>
 using std::cout;
 using std::endl;
 using std::string;
 using std::invalid_argument;
+using std::list;
 using namespace ChrisLib;
 
 DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
 //=========================
 
-void DataStore::Fit( RooAbsPdf *pdf, string fitMethod ) {
+void DataStore::Fit( RooAbsPdf *pdf ) {
   if ( !m_dataset ) return ;
   if ( m_dataset->numEntries() < 10 ) FillDSCB( -99., -99., -99., -99., -99., -99. );
   else {
     ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(-1);
     RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
     RooAbsReal* nll = 0;
-    // if ( fitMethod.find( "range10" ) !=string::npos ) nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false), RooFit::Range(120,130) );
-    // else if ( fitMethod.find( "range20" ) !=string::npos ) nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false), RooFit::Range(115,135) );
-    // else nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false) );
     nll = pdf->createNLL(*m_dataset, RooFit::CloneData(false) );
     nll->enableOffsetting( true );
     RooMinimizer *_minuit = new  RooMinimizer(*nll);
@@ -85,5 +85,29 @@ void DataStore::Divide( const DataStore &dataStore ) {
 
   if ( dataStore.m_nLow != 0 ) m_nLow = ( m_nLow - dataStore.m_nLow)/dataStore.m_nLow;
   else m_nLow = 1;
+
+}
+
+//=========================
+void DataStore::QuadSum( const DataStore &store ) {
+
+  list<double> vals { m_mean, store.m_mean };
+  m_mean = Oplus( vals );
+
+  vals = { m_sigma, store.m_sigma };
+  m_sigma = Oplus( vals );
+
+  vals = { m_alphaHi, store.m_alphaHi };
+  m_alphaHi = Oplus( vals );
+
+  vals = { m_nHi, store.m_nHi };
+  m_nHi = Oplus( vals );
+
+
+  vals = { m_alphaLow, store.m_alphaLow };
+  m_alphaLow = Oplus( vals );
+
+  vals = { m_nLow, store.m_nLow };
+  m_nLow = Oplus( vals );
 
 }

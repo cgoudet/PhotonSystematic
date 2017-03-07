@@ -65,8 +65,7 @@ using std::bitset;
 using std::to_string;
 using namespace ChrisLib;
 
-
-FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings33"}, m_fitMethod{"fitAll_fitExtPOI"}, m_debug{0}
+FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings33"}, m_fitMethod{"fitAll_fitExtPOI"}, m_debug{0}, m_postMerge(0)
 {
  gErrorIgnoreLevel = 1001;
 }
@@ -95,6 +94,7 @@ void FitSystematic::Configure( const string &confFile ) {
     ( "catOnly", po::value<vector<unsigned>>( &m_catOnly )->multitoken(), "" )
     ( "NPName", po::value<vector<string>>( &vectNPName )->multitoken(), "" )
     ( "mergeNP", po::value<vector<string>>( &inMergeNP )->multitoken(), "" )
+    ( "postMerge", po::value<bool>( &m_postMerge ), "" )
     ;
 
   po::variables_map vm;
@@ -139,6 +139,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     catVar = "catXSPhi";
     weightName = "weightXSPhi";
   }
+  else if ( m_analysis == "CouplingsBDT" ) catVar = "catCoupBDT";
 
   //Create roofit parameters to fill datasets
   const vector<string> CBVarName = { "m_yy", "weight" };  
@@ -222,7 +223,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
 
     if ( !branchPrefix.empty() ) branchPrefix.pop_back();
     string mergeName = MergedName( *itNPName );
-    if ( mergeName!=*itNPName ) { 
+    if ( !m_postMerge && mergeName!=*itNPName ) { 
       double mass = std::get<0>(currentEvent);
       map<string,tuple<double,double,int>>::iterator currentMax = eventsPerChannel.find( mergeName );
       if ( currentMax == eventsPerChannel.end() ) eventsPerChannel[mergeName] = currentEvent;
@@ -321,6 +322,10 @@ void FitSystematic::SelectVariablesAnalysis( list<string> &variables ) {
     variables.push_back( "weightXS" );
     variables.push_back( "catXSPhi" );
   }    
+  else if ( m_analysis == "CouplingsBDT" ) {
+    variables.push_back( "catCoupBDT" );
+    variables.push_back( "weight" );
+  }
   else {
     variables.push_back( "weight" );
     variables.push_back( "catCoup" );
@@ -358,6 +363,7 @@ void FitSystematic::Run( const vector<string> &rootFilesName ) {
   PrintResult( tablesName );
   DrawDists( tablesName );
 
+  if ( m_postMerge ) PostMergeResult();
 }
 
 //==========================================
@@ -420,7 +426,7 @@ void FitSystematic::FillNominalFit( vector<DataStore*> &nominalFit, RooAbsPdf *p
   for ( list<DataStore>::iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
     if ( m_fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
-    else itData->Fit( pdf, m_fitMethod );
+    else itData->Fit( pdf );
 
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
     unsigned category = static_cast<unsigned>(itData->GetCategory());
@@ -454,7 +460,7 @@ void FitSystematic::FillFluctFit( const vector<DataStore*> &nominalFit, RooAbsPd
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, nominalFit, mapVar, itData->GetName() );
     if ( m_fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
-    else itData->Fit( pdf, m_fitMethod );
+    else itData->Fit( pdf );
     itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
   }
 }
@@ -793,4 +799,55 @@ string FitSystematic::MergedName( const string &NPName ) {
   if ( it == m_mergeNP.end() ) return NPName;
   prefix = it->second.substr( 0, it->second.find("__"));
   return prefix+suffix;
+}
+//======================================================
+ void FitSystematic::PostMergeResult() {
+
+   map<string,DataStore> mergedStores;
+
+   m_NPName.clear();
+   for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
+     string mergedName = MergedName( itDataStore->GetName() );
+     m_NPName.push_back( mergedName );
+     if ( mergedName == itDataStore->GetName() ) continue;
+
+     mergedStores[mergedName].QuadSum(*itDataStore);
+
+     m_lDataStore.erase( itDataStore );
+     --itDataStore;
+   }
+
+   for ( auto vStore : mergedStores ) {
+     vStore.second.SetName( vStore.first );
+     m_lDataStore.push_back(vStore.second);
+   }
+
+   m_lDataStore.sort();
+   m_NPName.sort();
+   m_name+="_postMerged";
+
+   
+   list<string> tablesName;
+   PrintResult( tablesName );
+
+ }
+//=====================================================
+double FitSystematic::DSCB( double *x, double *p ) {
+  // p : mean, sigma, alphaLow, alphaHi, nLow, nHi
+  double t = (x[0]-p[0])/p[1];
+  double alphaLo = p[2];
+  double alphaHi = p[3];
+  if (t < -alphaLo) {
+    double nLo = p[4];
+    Double_t a = exp(-0.5*alphaLo*alphaLo);
+    Double_t b = nLo/alphaLo - alphaLo; 
+    return a/TMath::Power(alphaLo/nLo*(b - t), nLo);
+  }
+  else if (t > alphaHi) {
+    double nHi = p[4];
+    Double_t a = exp(-0.5*alphaHi*alphaHi);
+    Double_t b = nHi/alphaHi - alphaHi; 
+    return a/TMath::Power(alphaHi/nHi*(b + t), nHi);
+  }
+  return exp(-0.5*t*t);
 }

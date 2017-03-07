@@ -28,7 +28,7 @@ class FitSystematic {
   FitSystematic( const std::string &name );
   FitSystematic( const std::string &name, const std::string &confFile );
 
-
+  static double DSCB( double *x, double *p );
 
   void Configure( const std::string &confFile );
   void FillDataset( const std::vector<std::string> &rootFilesName );
@@ -45,6 +45,11 @@ class FitSystematic {
   static std::string RemoveVar( const std::string &inName );
   void PlotDists( const std::vector<DataStore*> &nominalFit, RooAbsPdf *pdf, std::map<std::string,RooRealVar*> &mapVar );
   
+  /**
+     Fill a multiarray with the fitted uncertainty in each nuisance parameter
+     Print the tables as a csv file
+     Call createdatacard
+   */
   void PrintResult( std::list<std::string> &tablesName );
   void SetDebug( int debug ) { m_debug=debug; }
   void CreateDataStoreList();
@@ -59,7 +64,7 @@ class FitSystematic {
   void FitDatasets();
   void FillArray( const DataStore &dataStore, const unsigned fluctLine, std::map<std::string,boost::multi_array<double,2>> &array  );
   void Run( const std::vector<std::string> &rootFilesName );
-
+  void PostMergeResult();
   std::string MergedName( const std::string &NPName );
 
  private :
@@ -78,6 +83,7 @@ class FitSystematic {
 
   std::map<std::string, std::string> m_mergeNP;
   int m_debug;
+  bool m_postMerge;
 };
 
 /* void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly, MapPlot &mapPlot, const std::string &outNamePrefix ); */
@@ -86,7 +92,7 @@ class FitSystematic {
 
 
 inline const std::list<std::string> &GetAllowedAnalyses() {
-  static const std::list<std::string> allowedAnalyses = {"Couplings33","Couplings13", "DiffXS", "DiffXSPhi" };
+  static const std::list<std::string> allowedAnalyses = {"Couplings33","Couplings13", "DiffXS", "DiffXSPhi", "CouplingsBDT" };
   return allowedAnalyses;
 }
 
