@@ -24,7 +24,7 @@ def LaunchFile( directory, fileName ) :
     options['containerConfig:'] = directory+'listContainers.txt'
     options['OutputDir:'] = 'FillNtuple_' + StripString(fileName)
     options[''] = '/sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/FillNtuple.cfg ' + directory + 'MxAOD/' + fileName
-    if 'FULL' in directory : options['PhotonHandler.Calibration.decorrelationModel:'] = 'FULL_ETACORRELATED_v1'
+    if 'FULL' in directory : options['PhotonHandler.Calibration.decorrelationModel:'] = 'FULL_v1'
 
     commandLine = 'runFillNtuple ' + ' '.join( [ key + ' ' + options[key] for key in options ] )
 #    print( commandLine )

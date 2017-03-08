@@ -426,9 +426,10 @@ void FitSystematic::FillNominalFit( vector<DataStore*> &nominalFit, RooAbsPdf *p
   for ( list<DataStore>::iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
     if ( m_fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
+    else if ( m_fitMethod.find("rootFit")!=string::npos ) itData->FitRootDSCB();
     else itData->Fit( pdf );
 
-    itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
+    if ( m_fitMethod.find("rootFit")==string::npos ) itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     while ( nominalFit.size() < category+1 ) nominalFit.push_back(0);
     nominalFit[category] = &(*itData);
@@ -460,8 +461,9 @@ void FitSystematic::FillFluctFit( const vector<DataStore*> &nominalFit, RooAbsPd
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, nominalFit, mapVar, itData->GetName() );
     if ( m_fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
+    else if ( m_fitMethod.find("rootFit")!=string::npos ) itData->FitRootDSCB();
     else itData->Fit( pdf );
-    itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
+    if ( m_fitMethod.find("rootFit")==string::npos ) itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
   }
 }
 //======================================================

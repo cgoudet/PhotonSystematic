@@ -1,4 +1,5 @@
 #include "PhotonSystematic/DataStore.h"
+#include "PlotFunctions/DrawOptions.h"
 #include "PlotFunctions/RobustMinimize.h"
 #include "PlotFunctions/SideFunctionsTpp.h"
 #include "RooAbsReal.h"
@@ -117,25 +118,38 @@ void DataStore::QuadSum( const DataStore &store ) {
 void DataStore::FitRootDSCB() {
   string name = string(m_dataset->GetName()) + "_hist";
   TH1 *hist = m_dataset->createHistogram( name.c_str(), *static_cast<RooRealVar*>(m_dataset->get()->first()) );
-  TF1 *dscb = new TF1( "DSCB", DSCB, 105, 160 );
-}
+  TF1 *dscb = new TF1( "funct", DataStore::DSCB ,115, 135, 7 );
+  dscb->SetParameters( 220, 125, 2, 1, 1, 1, 1 );
+  dscb->SetParNames( "norm", "mean", "sigma", "alphaLow", "alphaHi", "nLow", "nHi" );
+  hist->Fit(dscb, "Q");
+
+  FillDSCB( dscb->GetParameter(1), dscb->GetParameter(2), dscb->GetParameter(3), dscb->GetParameter(4), dscb->GetParameter(5), dscb->GetParameter(6) );
+
+  // DrawOptions d;
+  // d.AddOption( "outName", "test_" + m_name );
+  // d.AddOption( "rangeUserY", "0 0.99" );
+  // vector<TH1*> v = { hist };
+  // d.Draw( v );
+
+  // exit(0);
+  }
 //==========================
-double DataStore::DSCB( double *x, double *p ) {
-  // p : mean, sigma, alphaLow, alphaHi, nLow, nHi
-  double t = (x[0]-p[0])/p[1];
-  double alphaLo = p[2];
-  double alphaHi = p[3];
+Double_t DataStore::DSCB( Double_t *x, Double_t *p ) {
+  // p : norm, mean, sigma, alphaLow, alphaHi, nLow, nHi
+  Double_t t = (x[0]-p[1])/p[2];
+  double alphaLo = p[3];
+  double alphaHi = p[4];
   if (t < -alphaLo) {
-    double nLo = p[4];
+    double nLo = p[5];
     Double_t a = exp(-0.5*alphaLo*alphaLo);
     Double_t b = nLo/alphaLo - alphaLo; 
-    return a/TMath::Power(alphaLo/nLo*(b - t), nLo);
+    return p[0]*a/TMath::Power(alphaLo/nLo*(b - t), nLo);
   }
   else if (t > alphaHi) {
-    double nHi = p[4];
+    double nHi = p[6];
     Double_t a = exp(-0.5*alphaHi*alphaHi);
     Double_t b = nHi/alphaHi - alphaHi; 
-    return a/TMath::Power(alphaHi/nHi*(b + t), nHi);
+    return p[0]*a/TMath::Power(alphaHi/nHi*(b + t), nHi);
   }
-  return exp(-0.5*t*t);
+  return p[0]*exp(-0.5*t*t);
 }
