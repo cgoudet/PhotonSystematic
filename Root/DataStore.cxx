@@ -4,6 +4,8 @@
 #include "RooAbsReal.h"
 #include "RooDataSet.h"
 #include "RooAbsPdf.h"
+#include "TF1.h"
+#include "TMath.h"
 
 #include <iostream>
 #include <list>
@@ -14,7 +16,7 @@ using std::invalid_argument;
 using std::list;
 using namespace ChrisLib;
 
-DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_category(category),m_name(name)  {}
+DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_hist(0), m_category(category),m_name(name)  {}
 //=========================
 
 void DataStore::Fit( RooAbsPdf *pdf ) {
@@ -110,4 +112,30 @@ void DataStore::QuadSum( const DataStore &store ) {
   vals = { m_nLow, store.m_nLow };
   m_nLow = Oplus( vals );
 
+}
+//=================================
+void DataStore::FitRootDSCB() {
+  string name = string(m_dataset->GetName()) + "_hist";
+  TH1 *hist = m_dataset->createHistogram( name.c_str(), *static_cast<RooRealVar*>(m_dataset->get()->first()) );
+  TF1 *dscb = new TF1( "DSCB", DSCB, 105, 160 );
+}
+//==========================
+double DataStore::DSCB( double *x, double *p ) {
+  // p : mean, sigma, alphaLow, alphaHi, nLow, nHi
+  double t = (x[0]-p[0])/p[1];
+  double alphaLo = p[2];
+  double alphaHi = p[3];
+  if (t < -alphaLo) {
+    double nLo = p[4];
+    Double_t a = exp(-0.5*alphaLo*alphaLo);
+    Double_t b = nLo/alphaLo - alphaLo; 
+    return a/TMath::Power(alphaLo/nLo*(b - t), nLo);
+  }
+  else if (t > alphaHi) {
+    double nHi = p[4];
+    Double_t a = exp(-0.5*alphaHi*alphaHi);
+    Double_t b = nHi/alphaHi - alphaHi; 
+    return a/TMath::Power(alphaHi/nHi*(b + t), nHi);
+  }
+  return exp(-0.5*t*t);
 }

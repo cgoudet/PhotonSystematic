@@ -832,22 +832,3 @@ string FitSystematic::MergedName( const string &NPName ) {
 
  }
 //=====================================================
-double FitSystematic::DSCB( double *x, double *p ) {
-  // p : mean, sigma, alphaLow, alphaHi, nLow, nHi
-  double t = (x[0]-p[0])/p[1];
-  double alphaLo = p[2];
-  double alphaHi = p[3];
-  if (t < -alphaLo) {
-    double nLo = p[4];
-    Double_t a = exp(-0.5*alphaLo*alphaLo);
-    Double_t b = nLo/alphaLo - alphaLo; 
-    return a/TMath::Power(alphaLo/nLo*(b - t), nLo);
-  }
-  else if (t > alphaHi) {
-    double nHi = p[4];
-    Double_t a = exp(-0.5*alphaHi*alphaHi);
-    Double_t b = nHi/alphaHi - alphaHi; 
-    return a/TMath::Power(alphaHi/nHi*(b + t), nHi);
-  }
-  return exp(-0.5*t*t);
-}

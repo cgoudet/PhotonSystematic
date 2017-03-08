@@ -92,8 +92,15 @@ EL::StatusCode FillNtuple::execute()
 
   m_branchLinks["weight"] = lumiXsecWeight(10.) * var::weightCatCoup_Moriond2017();
   
+  // cout << "containersName : " << endl;
+  // copy( m_containersName.begin(), m_containersName.end(), ostream_iterator<string>(cout," "));
+  // cout << endl;
+
+
   for (auto sys:getSystematics()) {
+    //    cout << "syst : " << sys.name() << endl;
     if ( m_containersName.find(sys.name()) == m_containersName.end() ) continue;
+    //    cout << "passed" << endl;
     CP_CHECK("execute()",applySystematicVariation(sys));
     FillEntry( sys.name() );
   } 
@@ -164,6 +171,7 @@ void FillNtuple::FillLink( const string &inName, const string &outName, const ma
 
     map<string,double>::const_iterator citLocalVal = vars.find(inName);
     if ( m_debug==1 ) assert( citLocalVal!=vars.end() );
+    //    cout << "inName : " << inName << " " << outName << " " << citLocalVal->second << endl;
     citVarVal->second = citLocalVal->second;
   }
 
@@ -180,10 +188,14 @@ bool FillNtuple::FillEntry( const string &systName ) {
   dummyVar = var::catCoup_Moriond2017BDT();
   vars["catCoupBDT"] = dummyVar==-1 ? -99 : dummyVar;
 
+  //  cout << "systVarsName : " << endl;
   for ( const string itSyst:m_systVarsName ) {
     const string outName { ( systName =="" ? "" : systName+"_") +itSyst };
+    // cout << "systName : " << systName << endl;
+    // cout << "outName : " << outName << endl;
     FillLink( itSyst, outName, vars );
   }
+  //  if ( systName != "" )  exit(0);
   for ( const string itCommon:m_commonVarsName ) FillLink( itCommon, itCommon, vars );
 
   return true;

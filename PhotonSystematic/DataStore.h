@@ -1,6 +1,6 @@
 #ifndef DATASTORE_H
 #define DATASTORE_H
-
+#include "TH1.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include <string>
@@ -13,6 +13,7 @@ class DataStore {
 
   void Divide( const DataStore &dataStore );
   void Fit( RooAbsPdf *pdf );
+  void FitRootDSCB();
   void FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow );
   void ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alphaHi, RooRealVar* alphaLow, RooRealVar* nHi, RooRealVar* nLow ) const;
   void Print(); 
@@ -31,9 +32,10 @@ class DataStore {
 
   void SetDataset( RooAbsData* dataset ) { m_dataset = dataset; }
   void SetName( const std::string &name ) { m_name = name; }
-
+  static double DSCB( double *x, double *p );
  private :
   RooAbsData* m_dataset;
+  TH1* m_hist;
   int m_category;
   std::string m_name;
 

@@ -10,7 +10,7 @@ def TreatLine( line ) :
     return line
 
 def main() :
-    inFile = open( "/sps/atlas/c/cgoudet/Hgam/Inputs/MxAOD_h013_Full/MxAOD/MxAOD_full.txt" )
+    inFile = open( "/sps/atlas/c/cgoudet/Hgam/Inputs/h015_FULL/MxAOD_h015_FULL.txt" )
     listBranches = list({ TreatLine(line) for line in inFile })
     listBranches.sort()
     for vNP in listBranches : print('containerName='+vNP)
