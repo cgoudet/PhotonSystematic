@@ -7,6 +7,7 @@
 #include "RooAbsPdf.h"
 #include "TF1.h"
 #include "TMath.h"
+#include "TFitResult.h"
 
 #include <iostream>
 #include <list>
@@ -119,11 +120,28 @@ void DataStore::FitRootDSCB() {
   string name = string(m_dataset->GetName()) + "_hist";
   TH1 *hist = m_dataset->createHistogram( name.c_str(), *static_cast<RooRealVar*>(m_dataset->get()->first()) );
   TF1 *dscb = new TF1( "funct", DataStore::DSCB ,115, 135, 7 );
-  dscb->SetParameters( 220, 125, 2, 1, 1, 1, 1 );
+  double histMax = hist->GetMaximum();
+  dscb->SetParameters( histMax, 125, 2, 1, 1, 1, 1 );
   dscb->SetParNames( "norm", "mean", "sigma", "alphaLow", "alphaHi", "nLow", "nHi" );
-  hist->Fit(dscb, "Q");
+  dscb->SetParLimits( 0, histMax/2, histMax*2 );
+  dscb->SetParLimits( 1, 120, 130 );
+  dscb->SetParLimits( 2, 1, 10 );
+  dscb->SetParLimits( 3, 0.1, 20 );
+  dscb->SetParLimits( 4, 0.1, 20 );
+  dscb->SetParLimits( 5, 0, 1e6 );
+  dscb->SetParLimits( 6, 0, 1e6 );
+  cout << "name : " << m_name << endl;
 
-  FillDSCB( dscb->GetParameter(1), dscb->GetParameter(2), dscb->GetParameter(3), dscb->GetParameter(4), dscb->GetParameter(5), dscb->GetParameter(6) );
+  TFitResultPtr fitResult = 0;
+  int nFits=5;
+  do {
+    fitResult = hist->Fit(dscb, "S");
+    nFits --;
+  }
+  while( fitResult->Status() && nFits );
+
+  //( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow ) {
+  FillDSCB( dscb->GetParameter(1), dscb->GetParameter(2), dscb->GetParameter(4), dscb->GetParameter(3), dscb->GetParameter(6), dscb->GetParameter(5) );
 
   // DrawOptions d;
   // d.AddOption( "outName", "test_" + m_name );

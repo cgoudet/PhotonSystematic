@@ -87,7 +87,7 @@ EL::StatusCode FillNtuple::execute()
   HgammaAnalysis::execute();
 
 
-  for ( auto itVar : m_analysisVariables ) m_branchLinks[itVar] = -99;
+  for ( auto itVar : m_branchLinks ) itVar.second = -99;
 
   m_branchLinks["weight"] = lumiXsecWeight(10.) * var::weightCatCoup_Moriond2017();
   
@@ -162,8 +162,8 @@ void FillNtuple::FillLink( const string &inName, const string &outName, const ma
   if ( inName!=outName || citVarVal->second == -99 ) {
 
     map<string,double>::const_iterator citLocalVal = vars.find(inName);
-    if ( m_debug==1 ) assert( citLocalVal!=vars.end() );
-    citVarVal->second = citLocalVal->second;
+    if ( citLocalVal!=vars.end() ) citVarVal->second = citLocalVal->second;
+    else citVarVal->second = -99;
   }
 
 }
@@ -172,19 +172,21 @@ void FillNtuple::FillLink( const string &inName, const string &outName, const ma
 bool FillNtuple::FillEntry( const string &systName ) {
   map<string,double> vars;
   double dummy = var::m_yy();
-  vars["m_yy"] = dummy==-99 ? dummy : dummy/1e3;
-  vars["weight"] = var::weight();
-  double dummyVar = var::catCoup_Moriond2017();
-  vars["catCoup"] = dummyVar==-1 ? -99 : dummyVar;
-  dummyVar = var::catCoup_Moriond2017BDT();
-  vars["catCoupBDT"] = dummyVar==-1 ? -99 : dummyVar;
+  if ( dummy > 0 ) {
+    vars["m_yy"] = dummy/1e3;
+    vars["weight"]  = var::weight();
+    vars["catCoup"] = var::catCoup_Moriond2017();
+    vars["catCoupBDT"] = var::catCoup_Moriond2017BDT();
+  }
+
+  if ( vars.empty() ) return false;
 
   for ( const string itSyst:m_systVarsName ) {
     const string outName { ( systName =="" ? "" : systName+"_") +itSyst };
     FillLink( itSyst, outName, vars );
   }
-
+  
   for ( const string itCommon:m_commonVarsName ) FillLink( itCommon, itCommon, vars );
-
+  
   return true;
 }

@@ -9,8 +9,8 @@ import os
 sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/PlotFunctions/python"))
 from SideFunction import *
 from DrawOptions import *
-categoriesNames=[ "Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
-
+#categoriesNames=[ "Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
+categoriesNames = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
 #==========================================
 def GetTLimGaus( mapResults, side , fluct = [ 'up' ], syst = [ 'EG_RESOLUTION_ALL' ] ) :
 
@@ -312,6 +312,7 @@ def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
     fileName=directory+labelDir+'_Systematics_' + category + '_'+ variable + '.boost'
     do.WriteToFile( fileName )
     return fileName
+
 #==========================================
 def CompareFit( directory ) :
     """
@@ -319,7 +320,8 @@ def CompareFit( directory ) :
     """
     directory = AddSlash(directory)
     categories = [ 'Inclusive', "ggH-CenLow", "ggH-CenHigh", "ggH-FwdLow", "ggH-FwdHigh", "VBFloose", "VBFtight", "VHhad-loose", "VHhad-tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
-    if 'h014' in directory : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
+    if 'h014' in directory or 'h015' in directory : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
+
     variables = [ 'mean', 'sigma' ]
 
     boostFiles = [ SystModelBoost( directory, vCat, vVar ) for vCat in categories for vVar in variables ]
@@ -360,16 +362,6 @@ def main():
     args = parseArgs()
 
     if args.mode==0 : [ CompareFit( vDir ) for vDir in args.directories ]
-    # Now args is a argparse.NameSpace object
-    # It is basically a dictionnary in which you can access its element 
-    # as attributes instead of the quite heavy args['entry_name'] dict way.
-
-    # plotsForSlides = plotTest( args.directory, args.testID );
-    # os.system( 'pdfjoin ' + ' '.join( [ ' '.join( line ) for line in plotsForSlides ] ) + ' --outfile PhotonSyst_merged_testID' + str( args.testID) + '.pdf ' )
-#    CreateLatex( '', plotsForSlides )
- #   print( "Parsed : ")
-#    for opt in args.__dict__: print(opt, getattr(args, opt))
-
 
 # The program entrance
 if __name__ == '__main__':

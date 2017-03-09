@@ -477,10 +477,10 @@ void FitSystematic::FitDatasets() {
   
   mapVar["mean"]= new RooRealVar( "mean", "mean", 120, 130 );
   mapVar["sigma"]= new RooRealVar( "sigma", "sigma", 1.61, 0.1, 10 );
-  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 1.77, 0, 20 );
-  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 1.45, 0, 20 );
-  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 7.36, 0, 20 );
-  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 9.52, 0, 20 );
+  mapVar["alphaHi"]= new RooRealVar( "alphaHi", "alphaHi", 1.77, 0, 50 );
+  mapVar["alphaLow"]= new RooRealVar( "alphaLow", "alphaLow", 1.45, 0, 50 );
+  mapVar["nHi"]= new RooRealVar( "nHi", "nHi", 7.36, 0, 1e6 );
+  mapVar["nLow"]= new RooRealVar( "nLow", "nLow", 9.52, 0, 1e6 );
 
   HggTwoSidedCBPdf *pdf = new HggTwoSidedCBPdf( "DSCB", "DSCB", *mapVar["mass"], *mapVar["mean"], *mapVar["sigma"], *mapVar["alphaLow"], *mapVar["nLow"], *mapVar["alphaHi"], *mapVar["nHi"] );
 

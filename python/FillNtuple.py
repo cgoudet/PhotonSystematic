@@ -11,10 +11,10 @@ def UpdateRecord( directory, fileName ) :
     isFound = fileName in record.read()
     record.close()
 
-    if not isFound : 
-        record = open( recordName, 'a' )
-        record.write( fileName + '\n' )
-        record.close()
+    # if not isFound : 
+    #     record = open( recordName, 'a' )
+    #     record.write( fileName + '\n' )
+    #     record.close()
 
     return isFound
 #=================================
@@ -27,8 +27,8 @@ def LaunchFile( directory, fileName ) :
     if 'FULL' in directory : options['PhotonHandler.Calibration.decorrelationModel:'] = 'FULL_v1'
 
     commandLine = 'runFillNtuple ' + ' '.join( [ key + ' ' + options[key] for key in options ] )
-#    print( commandLine )
-    os.system( commandLine )
+    print( commandLine )
+#    os.system( commandLine )
 #=================================
 def LaunchFillNtuple( directory ) :
     files = [ StripString( f, 1, 0 ) for f in listFiles( directory+'MxAOD/', '*.root' ) ]
