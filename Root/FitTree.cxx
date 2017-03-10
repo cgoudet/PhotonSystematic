@@ -266,8 +266,9 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
       }
 
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
-      if ( string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000)
+      if ( m_fitMethod.find("unbinned")==string::npos && string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000)
 	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );
+
     }
   }//end itChannels
   if ( m_debug ) cout << "FitSystematic::FillEntryDataset end \n";
@@ -426,7 +427,7 @@ void FitSystematic::FillNominalFit( vector<DataStore*> &nominalFit, RooAbsPdf *p
   for ( list<DataStore>::iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     if ( itData->GetName() != "" ) continue;
     if ( m_fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
-    else if ( m_fitMethod.find("rootFit")!=string::npos ) itData->FitRootDSCB();
+    else if ( m_fitMethod.find("rootFit")!=string::npos ) itData->FitRootDSCB( DataStore::FitConstness( m_fitMethod, itData->GetName(),  1 ));
     else itData->Fit( pdf );
 
     if ( m_fitMethod.find("rootFit")==string::npos ) itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
@@ -441,15 +442,9 @@ void FitSystematic::FixParametersMethod ( unsigned int category, const vector<Da
   nominalFit[category]->ResetDSCB( mapVar["mean"], mapVar["sigma"], mapVar["alphaHi"], mapVar["alphaLow"], mapVar["nHi"], mapVar["nLow"] );
 
   for ( auto itVar = mapVar.begin(); itVar!=mapVar.end(); ++itVar ) itVar->second->setConstant(1);
-  bitset<2> setConstant;
-  if ( m_fitMethod.find( "fitExtPOI" ) != string::npos ) setConstant = bitset<2>(string("11"));
-  if ( m_fitMethod.find( "fitPOI" ) != string::npos ) {
-    if ( NPName.find("RESOLUTION") != string::npos ) setConstant.set(1);
-    else if ( NPName.find("SCALE") != string::npos ) setConstant.set(0);
-  }
-
-  if ( setConstant.test(0) ) mapVar["mean"]->setConstant(0);
-  if ( setConstant.test(1) ) mapVar["sigma"]->setConstant(0);
+  bitset<6> setConstant = DataStore::FitConstness( m_fitMethod, NPName );
+  mapVar["mean"]->setConstant(setConstant.test(0));
+  mapVar["sigma"]->setConstant(setConstant.test(1));
 
 }
 //======================================================
@@ -461,7 +456,10 @@ void FitSystematic::FillFluctFit( const vector<DataStore*> &nominalFit, RooAbsPd
     unsigned category = static_cast<unsigned>(itData->GetCategory());
     FixParametersMethod( category, nominalFit, mapVar, itData->GetName() );
     if ( m_fitMethod.find("meanHist")!=string::npos ) FitMeanHist( *itData, mapVar );
-    else if ( m_fitMethod.find("rootFit")!=string::npos ) itData->FitRootDSCB();
+    else if ( m_fitMethod.find("rootFit")!=string::npos ) {
+      itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
+      itData->FitRootDSCB( DataStore::FitConstness( m_fitMethod, itData->GetName() ) );
+    }
     else itData->Fit( pdf );
     if ( m_fitMethod.find("rootFit")==string::npos ) itData->FillDSCB( mapVar["mean"]->getVal(), mapVar["sigma"]->getVal(), mapVar["alphaHi"]->getVal(), mapVar["alphaLow"]->getVal(), mapVar["nHi"]->getVal(), mapVar["nLow"]->getVal() );
   }
@@ -833,4 +831,3 @@ string FitSystematic::MergedName( const string &NPName ) {
    PrintResult( tablesName );
 
  }
-//=====================================================

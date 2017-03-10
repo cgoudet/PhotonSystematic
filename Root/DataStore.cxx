@@ -17,8 +17,11 @@ using std::string;
 using std::invalid_argument;
 using std::list;
 using namespace ChrisLib;
+using std::bitset;
 
-DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_hist(0), m_category(category),m_name(name)  {}
+DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_hist(0), m_category(category),m_name(name)
+								       ,m_mean(125), m_sigma(2), m_alphaLow(1), m_alphaHi(1), m_nLow(5), m_nHi(5) 
+{}
 //=========================
 
 void DataStore::Fit( RooAbsPdf *pdf ) {
@@ -116,40 +119,32 @@ void DataStore::QuadSum( const DataStore &store ) {
 
 }
 //=================================
-void DataStore::FitRootDSCB() {
+void DataStore::FitRootDSCB( const std::bitset<6> &constness ) {
   string name = string(m_dataset->GetName()) + "_hist";
   TH1 *hist = m_dataset->createHistogram( name.c_str(), *static_cast<RooRealVar*>(m_dataset->get()->first()) );
-  TF1 *dscb = new TF1( "funct", DataStore::DSCB ,115, 135, 7 );
+  TF1 *dscb = new TF1( "funct", DataStore::DSCB ,105, 160, 7 );
   double histMax = hist->GetMaximum();
-  dscb->SetParameters( histMax, 125, 2, 1, 1, 1, 1 );
+  dscb->SetParameters( histMax, m_mean, m_sigma, m_alphaLow, m_alphaHi, m_nLow, m_nHi );
   dscb->SetParNames( "norm", "mean", "sigma", "alphaLow", "alphaHi", "nLow", "nHi" );
-  dscb->SetParLimits( 0, histMax/2, histMax*2 );
-  dscb->SetParLimits( 1, 120, 130 );
-  dscb->SetParLimits( 2, 1, 10 );
-  dscb->SetParLimits( 3, 0.1, 20 );
-  dscb->SetParLimits( 4, 0.1, 20 );
-  dscb->SetParLimits( 5, 0, 1e6 );
-  dscb->SetParLimits( 6, 0, 1e6 );
-  cout << "name : " << m_name << endl;
+  cout << "name : " << name << endl;
+  if ( constness.test(0) ) dscb->FixParameter( 1, m_mean );
+  if ( constness.test(1) ) dscb->FixParameter( 2, m_sigma );
+  if ( constness.test(3) ) dscb->FixParameter( 4, m_alphaHi );
+  if ( constness.test(2) ) dscb->FixParameter( 3, m_alphaLow );
+  if ( constness.test(5) ) dscb->FixParameter( 6, m_nHi );
+  if ( constness.test(4) ) dscb->FixParameter( 5, m_nLow );
 
-  TFitResultPtr fitResult = 0;
+  int status{0};
   int nFits=5;
   do {
-    fitResult = hist->Fit(dscb, "S");
-    nFits --;
+    status = hist->Fit(dscb, "LM", "LM");
+    --nFits;
+    cout << "status : " << status << endl;
   }
-  while( fitResult->Status() && nFits );
-
+  while( status!=4000 && nFits );
   //( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow ) {
   FillDSCB( dscb->GetParameter(1), dscb->GetParameter(2), dscb->GetParameter(4), dscb->GetParameter(3), dscb->GetParameter(6), dscb->GetParameter(5) );
 
-  // DrawOptions d;
-  // d.AddOption( "outName", "test_" + m_name );
-  // d.AddOption( "rangeUserY", "0 0.99" );
-  // vector<TH1*> v = { hist };
-  // d.Draw( v );
-
-  // exit(0);
   }
 //==========================
 Double_t DataStore::DSCB( Double_t *x, Double_t *p ) {
@@ -170,4 +165,17 @@ Double_t DataStore::DSCB( Double_t *x, Double_t *p ) {
     return p[0]*a/TMath::Power(alphaHi/nHi*(b + t), nHi);
   }
   return p[0]*exp(-0.5*t*t);
+}
+
+//=====================================================
+bitset<6> DataStore::FitConstness( const string &fitMethod, const string &NPName, int isNominal ){
+  bitset<6> output;
+  if ( isNominal ) return output;
+
+  if ( fitMethod.find( "fitExtPOI" ) != string::npos ) output = bitset<6>(string("111100"));
+  if ( fitMethod.find( "fitPOI" ) != string::npos ) {
+    if ( NPName.find("RESOLUTION") != string::npos ) output.set(1);
+    else if ( NPName.find("SCALE") != string::npos ) output.set(0);
+  }
+  return output;
 }

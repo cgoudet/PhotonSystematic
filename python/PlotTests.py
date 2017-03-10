@@ -274,63 +274,71 @@ def plotTest( dirPrefix, testID ) :
     return listPlots
 
 #====================================================
-def SystModelBoost( directory, category='Inclusive', variable='mean' ) :
+def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='CompareModels' ) :
     """
     Create the boost config file for a category and for a variable
     """
-    directory = AddSlash(directory)
-    labelDir = StripString(directory[:-1], 1, 0 )
 
     do = DrawOptions()
+    nDir = 0;
+
+    labelDir = ''
+    for d in directories : 
+        nDir+=1
+        labelDir = StripString(d[:-1], 1, 0 )
+        [ do.AddOption( 'rootFileName',d+labelDir+'_SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
+        [ do.AddOption( 'legend', labelDir + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
+
+
+    [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ]*nDir ] 
+
+    plotDirectory = directories[0] if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'
+    do.AddOption( 'plotDirectory', plotDirectory )
+
     do.AddOption( 'inputType', '1' )
-
     do.AddOption( 'varName',variable)
-    [ do.AddOption( 'rootFileName',directory+labelDir+'_SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
-    [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ] ] 
-
     do.AddOption( 'latex', variable )
-    do.AddOption( 'latexOpt','0.16 0.92' )
+    do.AddOption( 'latexOpt','0.16 0.95' )
     do.AddOption( 'latex',category )
-    do.AddOption( 'latexOpt','0.16 0.88' )
-    do.AddOption( 'latex', labelDir )
-    do.AddOption( 'latexOpt','0.16 0.96' )
-    do.AddOption( 'legend','Up : tot=__OPLUS' )
-    do.AddOption( 'legend','Down : tot=__OPLUS' )
-    do.AddOption( 'legendPos','0.7 0.95' )
+    do.AddOption( 'latexOpt','0.16 0.91' )
+    do.AddOption( 'legendPos','0.5 0.95' )
     do.AddOption( 'doLabels','1' )
     do.AddOption( 'saveRoot','1' )
     do.AddOption( 'grid','1' )
     do.AddOption( 'forceStyle','0' )
     do.AddOption( 'clean','0' )
     do.AddOption( 'line','0' )
-    do.AddOption( 'drawStyle','2' )
+    do.AddOption( 'drawStyle','11' )
     do.AddOption( 'xTitle','NP' )
     do.AddOption( 'yTitle','uncertainty' )
-    do.AddOption( 'topMargin','0.15' )
-    do.AddOption( 'bottomMargin','0.3' )
-    do.AddOption( 'plotDirectory',''+directory )
-    fileName=directory+labelDir+'_Systematics_' + category + '_'+ variable + '.boost'
+    do.AddOption( 'topMargin','0.01' )
+    do.AddOption( 'extendUp', str(0.075*nDir) )
+    if not 'ALL' in labelDir : do.AddOption( 'bottomMargin','0.3' )
+
+
+    fileName=plotDirectory+(labelDir if nDir==1 else prefix) + '_Systematics_' + category + '_'+ variable + '.boost'
     do.WriteToFile( fileName )
-    return fileName
+
+    os.system( 'PlotDist ' + fileName )
+    return StripString(fileName, 0, 1) + '_' + variable +'.pdf'
 
 #==========================================
-def CompareFit( directory ) :
+def CompareFit( directories, prefix='CompareModels' ) :
     """
     Read the CSV output files from FitSystematic and plot total 
     """
-    directory = AddSlash(directory)
+    if not directories : return
+
     categories = [ 'Inclusive', "ggH-CenLow", "ggH-CenHigh", "ggH-FwdLow", "ggH-FwdHigh", "VBFloose", "VBFtight", "VHhad-loose", "VHhad-tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
-    if 'h014' in directory or 'h015' in directory : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
+    if not 'h013' in directories[0] : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
 
     variables = [ 'mean', 'sigma' ]
 
-    boostFiles = [ SystModelBoost( directory, vCat, vVar ) for vCat in categories for vVar in variables ]
-    [ os.system( 'PlotDist ' + vFile ) for vFile in boostFiles ]
+    boostFiles = [ SystModelBoost( directories, vCat, vVar, prefix ) for vCat in categories for vVar in variables ]
 
-    for vVar in variables : boostFiles = [ vFile.replace( vVar+'.boost', vVar+'_'+vVar+'.pdf' ) for vFile in boostFiles ]
-
-    labelDir = StripString(directory[:-1], 1, 0 )
-    os.system( 'pdfjoin ' + ' '.join(boostFiles) + ' --outfile ' + directory + labelDir +'_Systematics.pdf' )
+    nDir = len(directories)
+    labelDir = directories[0]+StripString(directories[0][:-1], 1, 0 ) if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'+prefix
+    os.system( 'pdfjoin ' + ' '.join(boostFiles) + ' --outfile ' + labelDir +'_Systematics.pdf' )
 #==========================================
 def parseArgs():
     """
@@ -348,9 +356,10 @@ def parseArgs():
     parser.add_argument(
         '--mode', help='',
         default=0, type=int )
-
+    parser.add_argument( '--prefix', type=str, default='CompareModels' )
     parser.add_argument('directories', type=str, help="", nargs='*' )
     args = parser.parse_args()
+    args.directories = [ AddSlash(d) for d in args.directories ]
     return args
 
 #========================================
@@ -360,8 +369,8 @@ def main():
     """
     # Parsing the command line arguments
     args = parseArgs()
-
-    if args.mode==0 : [ CompareFit( vDir ) for vDir in args.directories ]
+    if args.mode==0 : CompareFit( args.directories, args.prefix )
+    elif args.mode==1 : [ CompareFit( [vDir], args.prefix ) for vDir in args.directories ]
 
 # The program entrance
 if __name__ == '__main__':

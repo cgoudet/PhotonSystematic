@@ -30,14 +30,30 @@ def LaunchFile( directory, fileName ) :
     print( commandLine )
 #    os.system( commandLine )
 #=================================
-def LaunchFillNtuple( directory ) :
+def BatchFile( directory, inFile ) :
+    output = sub.check_output( ['pwd'],  shell=1, stderr=sub.STDOUT ).split()[0]
+    directory = AddSlash(output)+directory 
+
+    batchFile = StripString(inFile)+'.sh'
+    batch = open( batchFile, 'w')
+    batch.write( 'server=`pwd`\ncd ${server}\nulimit -S -s 100000\nLD_LIBRARY_PATH=/sps/atlas/c/cgoudet/Hgam/FrameWork/RootCoreBin/lib:/sps/atlas/c/cgoudet/Hgam/FrameWork/RootCoreBin/bin:$LD_LIBRARY_PATH\ncd /sps/atlas/c/cgoudet/Hgam/FrameWork/RootCoreBin/\nsource local_setup.sh\ncd ${server}\ncp -v /sps/atlas/c/cgoudet/Hgam/FrameWork/RootCoreBin/obj/x86_64-slc6-gcc49-opt/PhotonSystematic/bin/runFillNtuple .\n' )
+    batch.write( 'runFillNtuple  /sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/FillNtuple.cfg '+directory+'MxAOD/'+inFile+' '+('PhotonHandler.Calibration.decorrelationModel: FULL_v1' if 'FULL' in directory else '') + ' OutputDir: FillNtuple_' + inFile+' containerConfig: ' + directory + 'listContainers.txt\n' )
+    batch.write('cp -r FillNtuple* /sps/atlas/c/cgoudet/Hgam/FrameWork/.\n' )
+    batch.close()
+    commandLine = '~/sub28.sh '+ inFile + ' ' + inFile + '.log ' + inFile + '.err ' + batchFile
+#    print( commandLine )
+    os.system( commandLine )
+#=================================
+def LaunchFillNtuple( directory, mode ) :
     files = [ StripString( f, 1, 0 ) for f in listFiles( directory+'MxAOD/', '*.root' ) ]
-    [ LaunchFile( directory, f ) for f in files ]
+    if mode == 0 : [ LaunchFile( directory, f ) for f in files ]
+    elif mode == 1 : [ BatchFile( directory, f ) for f in files ]
 
 #=================================
 def parseArgs() :
     parser = argparse.ArgumentParser()
     parser.add_argument( '--directory', default='', type=str )
+    parser.add_argument( '--mode', default=0, type=int )
 
     arg = parser.parse_args()
     arg.directory = AddSlash( arg.directory)
@@ -47,7 +63,8 @@ def main() :
     """
     """
     args = parseArgs()
-    LaunchFillNtuple( args.directory )
+    if args.mode in [0,1] : LaunchFillNtuple( args.directory, args.mode )
+
 #=================================
 if __name__ == '__main__':
     main()

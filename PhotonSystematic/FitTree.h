@@ -17,6 +17,7 @@
 #include <tuple>
 
 
+
 typedef std::map<std::string,std::vector<RooAbsData*>> MapSet;
 typedef std::map<std::string,std::vector<RooPlot*>> MapPlot;
 
@@ -67,6 +68,7 @@ class FitSystematic {
   void PostMergeResult();
   std::string MergedName( const std::string &NPName );
 
+ 
  private :
   unsigned m_nBins;
   std::string m_analysis;
@@ -84,6 +86,7 @@ class FitSystematic {
   std::map<std::string, std::string> m_mergeNP;
   int m_debug;
   bool m_postMerge;
+
 };
 
 /* void FitDatasets( const std::string &fitMethod, std::list<DataStore> &dataStore, const std::vector<unsigned> &catOnly, const std::vector<std::string> &systOnly, MapPlot &mapPlot, const std::string &outNamePrefix ); */
@@ -99,7 +102,7 @@ inline const std::list<std::string> &GetAllowedAnalyses() {
 /** \brief List of authorized options tags
  */
 inline const std::list<std::string> &GetAllowedFitMethods() {
-  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20","fitAll_fitExtPOI_meanHist", "fitAll_fitExtPOI_range20_merge", "fitAll_fitExtPOI_rootFit"};
+  static const std::list<std::string> allowedFitMethods = {"fitAll_fitExtPOI", "fitAll_fitExtPOI_range10", "fitAll_fitExtPOI_range20","fitAll_fitExtPOI_meanHist", "fitAll_fitExtPOI_range20_merge", "fitAll_fitExtPOI_rootFit", "fitAll_fitExtPOI_unbinned"};
   return allowedFitMethods;
 }
 

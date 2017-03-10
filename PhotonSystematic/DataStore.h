@@ -4,6 +4,7 @@
 #include "RooRealVar.h"
 #include "RooDataSet.h"
 #include <string>
+#include <bitset>
 
 class DataStore {
  public :
@@ -13,7 +14,7 @@ class DataStore {
 
   void Divide( const DataStore &dataStore );
   void Fit( RooAbsPdf *pdf );
-  void FitRootDSCB();
+  void FitRootDSCB( const std::bitset<6> &constness );
   void FillDSCB( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow );
   void ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alphaHi, RooRealVar* alphaLow, RooRealVar* nHi, RooRealVar* nLow ) const;
   void Print(); 
@@ -33,18 +34,25 @@ class DataStore {
   void SetDataset( RooAbsData* dataset ) { m_dataset = dataset; }
   void SetName( const std::string &name ) { m_name = name; }
   static double DSCB( double *x, double *p );
+  /**\brief Determine which variables should stay constant for a given fit.
+     - Two different behaviour for depending on the fit being the nominal or fluctuated one
+     - Variables are ordered as follow : 0=mean , 1=sigma, 2=alphaLow, 3=alphaHi, 4=nLow, 5=nHi
+     - 1 mean constant variable
+   */
+  static std::bitset<6> FitConstness( const std::string &fitMethod, const std::string &NPName, int isNominal=0 );
+
  private :
   RooAbsData* m_dataset;
   TH1* m_hist;
   int m_category;
   std::string m_name;
-
-  double m_alphaHi;
-  double m_alphaLow;
   double m_mean;
   double m_sigma;
-  double m_nHi;
+  double m_alphaLow;
+  double m_alphaHi;
   double m_nLow;
+  double m_nHi;
+
 };
 
 #endif
