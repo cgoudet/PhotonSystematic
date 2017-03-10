@@ -87,16 +87,16 @@ EL::StatusCode FillNtuple::execute()
   HgammaAnalysis::execute();
 
 
-  for ( auto itVar : m_branchLinks ) itVar.second = -99;
-
+  for ( auto &itVar : m_branchLinks ) itVar.second = -99;
   m_branchLinks["weight"] = lumiXsecWeight(10.) * var::weightCatCoup_Moriond2017();
   
+  bool keepEvent=false;
   for (auto sys:getSystematics()) {
     if ( m_containersName.find(sys.name()) == m_containersName.end() ) continue;
     CP_CHECK("execute()",applySystematicVariation(sys));
-    FillEntry( sys.name() );
+    keepEvent = FillEntry( sys.name() ) || keepEvent;
   } 
-  m_outTree->Fill();
+  if ( keepEvent ) m_outTree->Fill();
 
   if ( m_debug==1 ) m_debug=0;
   return EL::StatusCode::SUCCESS;
