@@ -711,7 +711,7 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
   stream.close();
   string directory = texName.substr( 0, texName.find_last_of("/"));
   string commandLine = "pdflatex -interaction=batchmode " + StripString(texName);
-  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
+  //  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
 
   if ( m_debug ) cout << "FitSystematic::DrawDists end" << endl;
 }
@@ -840,9 +840,16 @@ string FitSystematic::MergedName( const string &NPName ) {
      if ( mergedName == itDataStore->GetName() ) continue;
      unsigned category = itDataStore->GetCategory();
      vector<DataStore> &vStore = mergedStores[mergedName];
-     while ( category >= vStore.size() ) vStore.push_back( DataStore( mergedName, vStore.size(), 0) );
+     while ( category >= vStore.size() ) {
+       vStore.push_back( DataStore( mergedName, vStore.size(), 0) );
+       vStore.back().FillDSCB( 0, 0, 0, 0, 0, 0 );
+     }
 
+     cout << "before" << endl;
+     vStore[category].Print();
      vStore[category].QuadSum(*itDataStore);
+     cout << "after\n";
+     vStore[category].Print();
 
      m_lDataStore.erase( itDataStore );
      --itDataStore;

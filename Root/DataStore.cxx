@@ -63,7 +63,7 @@ void DataStore::ResetDSCB( RooRealVar* mean, RooRealVar* sigma, RooRealVar* alph
 void DataStore::Print() {
   cout << "DataStore : " << m_name << endl;
   cout << "category : " << m_category << endl;
-  cout << "entries : " << m_dataset->sumEntries() << endl;
+  if ( m_dataset ) cout << "entries : " << m_dataset->sumEntries() << endl;
   cout << "mean : " << m_mean << endl;
   cout << "sigma : " << m_sigma << endl;
   cout << "alphaHi : " << m_alphaHi << endl;
