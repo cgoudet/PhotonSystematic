@@ -126,6 +126,12 @@ void DataStore::FitRootDSCB( const std::bitset<6> &constness ) {
   double histMax = hist->GetMaximum();
   dscb->SetParameters( histMax, m_mean, m_sigma, m_alphaLow, m_alphaHi, m_nLow, m_nHi );
   dscb->SetParNames( "norm", "mean", "sigma", "alphaLow", "alphaHi", "nLow", "nHi" );
+  dscb->SetParLimits( 1, 120, 130 );
+  dscb->SetParLimits( 2, 0.5, 10 );
+  dscb->SetParLimits( 3, 0.5, 10 );
+  dscb->SetParLimits( 4, 0.5, 10 );
+  dscb->SetParLimits( 5, 1, 1e6 );
+  dscb->SetParLimits( 6, 1, 1e6 );
   cout << "name : " << name << endl;
   if ( constness.test(0) ) dscb->FixParameter( 1, m_mean );
   if ( constness.test(1) ) dscb->FixParameter( 2, m_sigma );
@@ -137,7 +143,7 @@ void DataStore::FitRootDSCB( const std::bitset<6> &constness ) {
   int status{0};
   int nFits=5;
   do {
-    status = hist->Fit(dscb, "LM", "LM");
+    status = hist->Fit(dscb, "LMQ", "LM");
     --nFits;
     cout << "status : " << status << endl;
   }

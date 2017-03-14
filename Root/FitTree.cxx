@@ -113,8 +113,8 @@ void FitSystematic::Configure( const string &confFile ) {
   if ( m_analysis == "Couplings13" ) m_categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( m_analysis == "DiffXS" ) m_categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( m_analysis == "DiffXSPhi" ) m_categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
-  else m_categoriesName = { "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" };
-  
+  //  else m_categoriesName = { "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" };
+  else m_categoriesName = { "Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"}; 
   for ( auto vMergeLine : inMergeNP ) {
     vector<string> dumV;
     ParseVector( vMergeLine, dumV );
@@ -172,7 +172,8 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     TFile *inFile =  new TFile( vFileName.c_str() );
     if ( inFile->IsZombie() ) throw invalid_argument( "FitTree : input file does not exist : " + vFileName );
     
-    TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree" ).c_str() ));
+    TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree", "output" ).c_str() ));
+
     m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
 
     if ( branchesToLink.empty() ) {//Optimize the branches to effectively link to gain reading time
@@ -184,6 +185,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
+      if ( iEntry%20 ) continue;
       inTree->GetEntry( iEntry );
       FillEntryDataset( mapCBParameters, catVar );
     }//end iEntry
@@ -199,6 +201,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
 		       const string &catVar
 		       ) {
   if ( m_debug ) cout << "FitSystematic::FillEntryDataset\n";
+
   bool isCatVarCommon = find( m_commonVars.begin(), m_commonVars.end(), catVar ) != m_commonVars.end();
 
   RooRealVar *weightVar = observables["weight"];
@@ -211,11 +214,11 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
     observables
    */
   for ( list<string>::const_iterator itNPName = m_NPName.begin(); itNPName!=m_NPName.end(); ++itNPName ) {
+    if ( itNPName->find("PH_EFF") != string::npos || itNPName->find("PH_Iso")!=string::npos ) continue;
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
     string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
     int category = static_cast<int>(m_mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
-    if ( category>33) cout << "category : " << category << endl;
     tuple<double,double,int> currentEvent { 0, 0, category };
 
     // fill mass, weight and category into a tuple
@@ -232,9 +235,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
       else itMasses->second.push_back( mass );
     }
     else eventsPerChannel[*itNPName] = currentEvent;
-
   }//end itNPName
-
 
   RooArgSet setObservables;
   for ( auto obs : observables ) setObservables.add( *obs.second );
@@ -242,23 +243,19 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
   double massMax = observables["m_yy"]->getMax();
 
   for ( auto itChannels : eventsPerChannel ) {
-
     int category = std::get<2>(itChannels.second);
     string name = itChannels.first;
     double mass = std::get<0>( itChannels.second );
-    //    cout << itChannels.first << " " << category << " " << mass << endl;
     map<string,list<double>>::iterator itList = masses.find( name );
     if ( itList != masses.end() && !itList->second.empty() ) mass = ComputeTotalSystMass( itList->second );
-    //    cout << "mass : " << mass << endl;
     if ( mass < massMin || mass > massMax ) continue;
-    //    cout << "passed" << endl;
     observables["m_yy"]->setVal( mass );
     weightVar->setVal( std::get<1>( itChannels.second ) );
 
     ExtendMapVect( m_datasets, name, category );
     vector<RooAbsData*> *vectDataset = &m_datasets[name];
+    if ( !category ) throw runtime_error( "FitTree::FillEntryDataset : category 0 reserved for inclusive.");
     for ( int i = 0; i<category+1; i+=category ) {
-      //      cout << "fill : " << i << endl;
       if ( !(*vectDataset)[i] ) {
 	TString title = TString::Format( "%s_cat%d", name.c_str(), i );
 	(*vectDataset)[i] = new RooDataSet( title, title, setObservables,  weightVar->GetName() );
@@ -293,7 +290,7 @@ double FitSystematic::ComputeTotalSystMass( list<double> &masses ) {
 //===
 
 void FitSystematic::SelectAnalysisBranches( list<string> &branchesOfInterest ) {
-
+  cout << "SelectAnalysisBranches" << endl;
   list<string> keys;
   m_mapBranch.GetKeys( keys );
 
@@ -360,6 +357,9 @@ void FitSystematic::Run( const vector<string> &rootFilesName ) {
 
   //Create a directory at the target to hold all results.
 
+  if ( m_catOnly.empty() )
+    for ( unsigned i=0; i<m_categoriesName.size(); ++i ) 
+      m_catOnly.push_back( i );
   list<string> tablesName;
   PrintResult( tablesName );
   DrawDists( tablesName );
@@ -409,6 +409,7 @@ void FitSystematic::CreateDataStoreList() {
 	m_lDataStore.push_back( DataStore( itMapSet->first, iCat, itMapSet->second[iCat] ) );
     }
   }
+  cout << "maxCat : "  << maxCat << endl;
   if ( maxCat!=m_categoriesName.size()-1 ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
 
 }
@@ -507,25 +508,42 @@ void FitSystematic::FitDatasets() {
 
 //====================================================================
 void FitSystematic::FillArray( const DataStore &dataStore, const unsigned fluctLine, map<string,multi_array<double,2>> &array  ) {
+  cout << "FitSystematic::FillArray" << endl;
   string name = dataStore.GetName();
+  cout << "name : " << name << endl;
   if ( name == "" ) return;
   bool isUp = 0;
   if ( name.find( "__1up" ) != string::npos ) isUp=1;
-  
-  unsigned column = 2*dataStore.GetCategory() + isUp;
+  cout << "name : " << name << " " << isUp << endl;  
+
+  unsigned column = 2*dataStore.GetCategory() + (isUp?1:0);
+  cout << "category : " << dataStore.GetCategory() << endl;
+  cout << "column : " << column << endl;
   unsigned arrayLines = max( fluctLine+1, static_cast<unsigned>(array.begin()->second.size()) );
+  cout << "arrayLines : " << arrayLines << endl;
   unsigned arrayCols = column+1;
+  cout << "test : " << array.begin()->second.size() << endl;
+
   if ( array.begin()->second.size() ) arrayCols = max( arrayCols, static_cast<unsigned>(array.begin()->second[0].size()) );
+  cout << "end test : " << arrayCols << endl;
+  for ( auto itArray=array.begin(); itArray!=array.end(); ++itArray ) {
+    cout << itArray->first << endl;
+    cout << itArray->second.size() << endl;
+    cout << arrayLines << " " << arrayCols << endl;
+    itArray->second.resize( extents[arrayLines][arrayCols] );
+  }
+  cout << "end itArray" << endl;
+  PrintMapKeys( array );
 
-  for ( auto itArray=array.begin(); itArray!=array.end(); ++itArray ) itArray->second.resize( extents[arrayLines][arrayCols] );
-
+  cout << "sizes : " << fluctLine << "/" << array["mean"].size() <<  endl;
+  cout << column << "/" << array["mean"][fluctLine].size() << endl;
   array["mean"][fluctLine][column] = dataStore.GetMean();
   array["sigma"][fluctLine][column] = dataStore.GetSigma();
   
  }  
  //====================================================================
 void FitSystematic::PrintResult( list<string> &tablesName ) {
-
+  cout << "FitSystematic::PrintResult" << endl;
    map<string,multi_array<double,2>> tables;
    list<string> variables = GetVariables();
    for ( auto itVar = variables.begin(); itVar!=variables.end(); ++itVar ) tables[*itVar] = multi_array<double,2>();
@@ -533,6 +551,7 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    map<string,unsigned> systIndex;
    int nCats=-1;
    vector<string> linesName;
+   cout << "start itDatastore" << endl;
    for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
      string systName = RemoveSeparator( RemoveVar( itDataStore->GetName() ), "_" );
      if ( systName == "" ) continue;
@@ -545,9 +564,11 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
        linesName.push_back( ReplaceString("_","-")(systName) );
      }
      else index = posSyst->second;
-
+     cout << "FillArray" << endl;
      FillArray( *itDataStore, index, tables );
+     cout << "FilledArray" << endl;
    }
+   cout << "end itDatastore" << endl;
    if ( nCats < 0 ) throw runtime_error( "PrintResult : No valid categories." );
    if ( !tables.begin()->second.size() ) throw runtime_error( "PrintResult : No systematic to print." );
    vector<string> colsName={"systName"};
@@ -555,13 +576,13 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    list<list<string>> forInCombine;
    forInCombine.push_back( list<string>() );
    forInCombine.push_back( {"Down", "Up"} );
-
+   cout << "nCols" << endl;
    unsigned nCols = tables.begin()->second[0].size()/2;
    if ( m_categoriesName.empty() || nCols !=m_categoriesName.size() ) 
      for ( unsigned i=0; i<nCols; ++i ) forInCombine.front().push_back( string(TString::Format( "cat%d", i )) );
    else transform( m_categoriesName.begin(), m_categoriesName.end(), back_inserter(forInCombine.front() ), ReplaceString(" ","") );
 
-
+   cout << "combine" << endl;
    list<string> combined;
    CombineNames( forInCombine, combined, "" );
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
@@ -573,7 +594,7 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
      PrintArray( outName, itVar->second, linesName, colsName );
      tablesName.push_back( outName );
    }
-
+   cout << "Datacard" << endl;
    CreateDatacard( tables );
    
  }
@@ -727,27 +748,31 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
   transform( npName.begin(), npName.end(), npName.begin(), ReplaceString("__1up"));
 
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
+    cout << "itTable : " << itTables->first << endl;
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
-
     for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
+      cout << "iLine : " << iLine << endl;
       string name = "ATLAS_" + npName[iLine] + "_Moriond2017";
+      cout << name << endl;
       if ( (itTables->first == "mean" && name.find("SCALE")==string::npos)
 	   || (itTables->first == "sigma" && name.find("RESOLUTION")==string::npos) ) continue;
+      cout << "pass " << endl;
       Arbre systematic( "systematic" );
       systematic.SetAttribute( "centralValue", "1" );
       systematic.SetAttribute( "correlation", "All" );
       systematic.SetAttribute( "Name", name );
-
+      cout << "catOnlySize : " << m_catOnly.size() << endl;
       for ( unsigned iCol=0; iCol<m_catOnly.size(); ++iCol ) {
+	cout << "iCol : " << iCol << endl;
 	unsigned currentCat = m_catOnly[iCol];
 	string nameCat = name + "_" + m_categoriesName[currentCat];
 	RooRealVar var( nameCat.c_str(), nameCat.c_str(), -100 );
-
+	cout << "condition : " << itTables->second[iLine][iCol] << " " << itTables->second[iLine][2*iCol+1] << endl;
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][2*iCol+1] ) continue;
 
 	double upVal = itTables->second[iLine][2*iCol+1]*100;
 	double downVal = itTables->second[iLine][2*iCol]*100;
-
+	cout << "vals : " << upVal << " " << downVal << endl;
 	//Setting datacard 
 	var.setRange( downVal, upVal );
 	ostream &s=streams[currentCat];
@@ -764,8 +789,10 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
 	systEffect.SetAttribute( "category", m_categoriesName[currentCat] );
 	systEffect.SetAttribute( "varName", itTables->first );
 	systematic.AddChild( systEffect );
+
       }
       NPCorrelation.AddChild( systematic );
+
     }//end iLine
   }
 
@@ -802,25 +829,30 @@ string FitSystematic::MergedName( const string &NPName ) {
 }
 //======================================================
  void FitSystematic::PostMergeResult() {
-
-   map<string,DataStore> mergedStores;
+   cout << "PostMergeResults" << endl;
+   map<string,vector<DataStore>> mergedStores;
 
    m_NPName.clear();
    for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
      string mergedName = MergedName( itDataStore->GetName() );
+
      m_NPName.push_back( mergedName );
      if ( mergedName == itDataStore->GetName() ) continue;
+     unsigned category = itDataStore->GetCategory();
+     vector<DataStore> &vStore = mergedStores[mergedName];
+     while ( category >= vStore.size() ) vStore.push_back( DataStore( mergedName, vStore.size(), 0) );
 
-     mergedStores[mergedName].QuadSum(*itDataStore);
+     vStore[category].QuadSum(*itDataStore);
 
      m_lDataStore.erase( itDataStore );
      --itDataStore;
    }
 
-   for ( auto vStore : mergedStores ) {
-     vStore.second.SetName( vStore.first );
-     m_lDataStore.push_back(vStore.second);
-   }
+   for ( auto vStore : mergedStores ) 
+     for ( auto store : vStore.second )
+       m_lDataStore.push_back(store);
+
+
 
    m_lDataStore.sort();
    m_NPName.sort();

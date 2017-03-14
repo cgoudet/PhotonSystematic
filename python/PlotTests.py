@@ -311,12 +311,14 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     do.AddOption( 'drawStyle','11' )
     do.AddOption( 'xTitle','NP' )
     do.AddOption( 'yTitle','uncertainty' )
+    do.AddOption( 'shiftColor', '1' )
     do.AddOption( 'topMargin','0.01' )
     do.AddOption( 'extendUp', str(0.075*nDir) )
     if not 'ALL' in labelDir : do.AddOption( 'bottomMargin','0.3' )
 
 
     fileName=plotDirectory+(labelDir if nDir==1 else prefix) + '_Systematics_' + category + '_'+ variable + '.boost'
+    print( fileName )
     do.WriteToFile( fileName )
 
     os.system( 'PlotDist ' + fileName )

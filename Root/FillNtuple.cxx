@@ -97,8 +97,8 @@ EL::StatusCode FillNtuple::execute()
     keepEvent = FillEntry( sys.name() ) || keepEvent;
   } 
   if ( keepEvent ) m_outTree->Fill();
-
   if ( m_debug==1 ) m_debug=0;
+
   return EL::StatusCode::SUCCESS;
 }
 
@@ -157,7 +157,6 @@ void FillNtuple::LinkOutputTree() {
 //==============================================================
 void FillNtuple::FillLink( const string &inName, const string &outName, const map<string,double> &vars ) {
   map<string,double>::iterator citVarVal = m_branchLinks.find(outName);
-
   if ( m_debug==1 ) assert( citVarVal!=m_branchLinks.end() );
   if ( inName!=outName || citVarVal->second == -99 ) {
 

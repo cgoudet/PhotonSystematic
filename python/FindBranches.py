@@ -13,7 +13,11 @@ def main() :
     inFile = open( "/sps/atlas/c/cgoudet/Hgam/Inputs/h015_FULL/MxAOD_h015_FULL.txt" )
     listBranches = list({ TreatLine(line) for line in inFile })
     listBranches.sort()
-    for vNP in listBranches : print('containerName='+vNP)
+    counter=0
+    for vNP in listBranches : 
+        print('containerName='+vNP)
+        # print( counter, vNP )
+        # counter+=1
     
 if __name__ == '__main__':
     main()
