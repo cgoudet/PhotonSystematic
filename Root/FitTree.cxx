@@ -290,7 +290,7 @@ double FitSystematic::ComputeTotalSystMass( list<double> &masses ) {
 //===
 
 void FitSystematic::SelectAnalysisBranches( list<string> &branchesOfInterest ) {
-  cout << "SelectAnalysisBranches" << endl;
+  if ( m_debug ) cout << "SelectAnalysisBranches" << endl;
   list<string> keys;
   m_mapBranch.GetKeys( keys );
 
@@ -409,7 +409,7 @@ void FitSystematic::CreateDataStoreList() {
 	m_lDataStore.push_back( DataStore( itMapSet->first, iCat, itMapSet->second[iCat] ) );
     }
   }
-  cout << "maxCat : "  << maxCat << endl;
+
   if ( maxCat!=m_categoriesName.size()-1 ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
 
 }
@@ -508,42 +508,28 @@ void FitSystematic::FitDatasets() {
 
 //====================================================================
 void FitSystematic::FillArray( const DataStore &dataStore, const unsigned fluctLine, map<string,multi_array<double,2>> &array  ) {
-  cout << "FitSystematic::FillArray" << endl;
+  if ( m_debug ) cout << "FitSystematic::FillArray" << endl;
   string name = dataStore.GetName();
-  cout << "name : " << name << endl;
   if ( name == "" ) return;
   bool isUp = 0;
   if ( name.find( "__1up" ) != string::npos ) isUp=1;
-  cout << "name : " << name << " " << isUp << endl;  
 
   unsigned column = 2*dataStore.GetCategory() + (isUp?1:0);
-  cout << "category : " << dataStore.GetCategory() << endl;
-  cout << "column : " << column << endl;
   unsigned arrayLines = max( fluctLine+1, static_cast<unsigned>(array.begin()->second.size()) );
-  cout << "arrayLines : " << arrayLines << endl;
   unsigned arrayCols = column+1;
-  cout << "test : " << array.begin()->second.size() << endl;
 
   if ( array.begin()->second.size() ) arrayCols = max( arrayCols, static_cast<unsigned>(array.begin()->second[0].size()) );
-  cout << "end test : " << arrayCols << endl;
-  for ( auto itArray=array.begin(); itArray!=array.end(); ++itArray ) {
-    cout << itArray->first << endl;
-    cout << itArray->second.size() << endl;
-    cout << arrayLines << " " << arrayCols << endl;
+  for ( auto itArray=array.begin(); itArray!=array.end(); ++itArray )
     itArray->second.resize( extents[arrayLines][arrayCols] );
-  }
-  cout << "end itArray" << endl;
-  PrintMapKeys( array );
 
-  cout << "sizes : " << fluctLine << "/" << array["mean"].size() <<  endl;
-  cout << column << "/" << array["mean"][fluctLine].size() << endl;
+
   array["mean"][fluctLine][column] = dataStore.GetMean();
   array["sigma"][fluctLine][column] = dataStore.GetSigma();
   
  }  
  //====================================================================
 void FitSystematic::PrintResult( list<string> &tablesName ) {
-  cout << "FitSystematic::PrintResult" << endl;
+  if ( m_debug ) cout << "FitSystematic::PrintResult" << endl;
    map<string,multi_array<double,2>> tables;
    list<string> variables = GetVariables();
    for ( auto itVar = variables.begin(); itVar!=variables.end(); ++itVar ) tables[*itVar] = multi_array<double,2>();
@@ -551,7 +537,6 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    map<string,unsigned> systIndex;
    int nCats=-1;
    vector<string> linesName;
-   cout << "start itDatastore" << endl;
    for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
      string systName = RemoveSeparator( RemoveVar( itDataStore->GetName() ), "_" );
      if ( systName == "" ) continue;
@@ -564,11 +549,9 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
        linesName.push_back( ReplaceString("_","-")(systName) );
      }
      else index = posSyst->second;
-     cout << "FillArray" << endl;
      FillArray( *itDataStore, index, tables );
-     cout << "FilledArray" << endl;
    }
-   cout << "end itDatastore" << endl;
+
    if ( nCats < 0 ) throw runtime_error( "PrintResult : No valid categories." );
    if ( !tables.begin()->second.size() ) throw runtime_error( "PrintResult : No systematic to print." );
    vector<string> colsName={"systName"};
@@ -576,13 +559,13 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    list<list<string>> forInCombine;
    forInCombine.push_back( list<string>() );
    forInCombine.push_back( {"Down", "Up"} );
-   cout << "nCols" << endl;
+
    unsigned nCols = tables.begin()->second[0].size()/2;
    if ( m_categoriesName.empty() || nCols !=m_categoriesName.size() ) 
      for ( unsigned i=0; i<nCols; ++i ) forInCombine.front().push_back( string(TString::Format( "cat%d", i )) );
    else transform( m_categoriesName.begin(), m_categoriesName.end(), back_inserter(forInCombine.front() ), ReplaceString(" ","") );
 
-   cout << "combine" << endl;
+
    list<string> combined;
    CombineNames( forInCombine, combined, "" );
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
@@ -594,7 +577,7 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
      PrintArray( outName, itVar->second, linesName, colsName );
      tablesName.push_back( outName );
    }
-   cout << "Datacard" << endl;
+
    CreateDatacard( tables );
    
  }
@@ -711,7 +694,7 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
   stream.close();
   string directory = texName.substr( 0, texName.find_last_of("/"));
   string commandLine = "pdflatex -interaction=batchmode " + StripString(texName);
-  //  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
+  //<<  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
 
   if ( m_debug ) cout << "FitSystematic::DrawDists end" << endl;
 }
@@ -738,7 +721,7 @@ void FitSystematic::SaveFitValues() {
 
 //==========================================================
 void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
-  cout << "FitSystematic::CreateDatacard" << endl;
+  if (m_debug) cout << "FitSystematic::CreateDatacard" << endl;
   vector<stringstream> streams( m_categoriesName.size() );
   for ( unsigned iCol=0; iCol<streams.size(); ++iCol )  streams[iCol] << "[" << m_categoriesName[iCol] << "]\n";
 
@@ -748,31 +731,27 @@ void FitSystematic::CreateDatacard( map<string,multi_array<double,2>> tables ) {
   transform( npName.begin(), npName.end(), npName.begin(), ReplaceString("__1up"));
 
   for ( auto itTables=tables.begin(); itTables!=tables.end(); ++itTables ) {
-    cout << "itTable : " << itTables->first << endl;
     if ( itTables->first != "mean" && itTables->first != "sigma" ) continue;
     for ( unsigned iLine=0; iLine<itTables->second.size(); ++iLine ) {
-      cout << "iLine : " << iLine << endl;
       string name = "ATLAS_" + npName[iLine] + "_Moriond2017";
-      cout << name << endl;
       if ( (itTables->first == "mean" && name.find("SCALE")==string::npos)
 	   || (itTables->first == "sigma" && name.find("RESOLUTION")==string::npos) ) continue;
-      cout << "pass " << endl;
+
       Arbre systematic( "systematic" );
       systematic.SetAttribute( "centralValue", "1" );
       systematic.SetAttribute( "correlation", "All" );
       systematic.SetAttribute( "Name", name );
-      cout << "catOnlySize : " << m_catOnly.size() << endl;
+
       for ( unsigned iCol=0; iCol<m_catOnly.size(); ++iCol ) {
-	cout << "iCol : " << iCol << endl;
+
 	unsigned currentCat = m_catOnly[iCol];
 	string nameCat = name + "_" + m_categoriesName[currentCat];
 	RooRealVar var( nameCat.c_str(), nameCat.c_str(), -100 );
-	cout << "condition : " << itTables->second[iLine][iCol] << " " << itTables->second[iLine][2*iCol+1] << endl;
 	if ( !itTables->second[iLine][iCol] && !itTables->second[iLine][2*iCol+1] ) continue;
 
 	double upVal = itTables->second[iLine][2*iCol+1]*100;
 	double downVal = itTables->second[iLine][2*iCol]*100;
-	cout << "vals : " << upVal << " " << downVal << endl;
+
 	//Setting datacard 
 	var.setRange( downVal, upVal );
 	ostream &s=streams[currentCat];
@@ -829,7 +808,7 @@ string FitSystematic::MergedName( const string &NPName ) {
 }
 //======================================================
  void FitSystematic::PostMergeResult() {
-   cout << "PostMergeResults" << endl;
+   if ( m_debug )cout << "PostMergeResults" << endl;
    map<string,vector<DataStore>> mergedStores;
 
    m_NPName.clear();
@@ -845,11 +824,7 @@ string FitSystematic::MergedName( const string &NPName ) {
        vStore.back().FillDSCB( 0, 0, 0, 0, 0, 0 );
      }
 
-     cout << "before" << endl;
-     vStore[category].Print();
      vStore[category].QuadSum(*itDataStore);
-     cout << "after\n";
-     vStore[category].Print();
 
      m_lDataStore.erase( itDataStore );
      --itDataStore;
@@ -869,4 +844,5 @@ string FitSystematic::MergedName( const string &NPName ) {
    list<string> tablesName;
    PrintResult( tablesName );
 
+   if ( m_debug )cout << "PostMergeResults end" << endl;
  }
