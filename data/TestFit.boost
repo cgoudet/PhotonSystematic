@@ -1,2 +1,2 @@
-fitMethod=fitAll_fitExtPOI_range20
-analysis=Couplings33
+fitMethod=fitAll_fitExtPOI_rootFit
+analysis=CouplingsBDT

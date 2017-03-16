@@ -1,4 +1,4 @@
-fitMethod=fitAll_fitExtPOI_range20
+fitMethod=fitAll_fitExtPOI_rootFit
 analysis=Couplings33
 postMerge=1
 

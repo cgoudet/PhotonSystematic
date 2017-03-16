@@ -185,7 +185,6 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
-      if ( iEntry%20 ) continue;
       inTree->GetEntry( iEntry );
       FillEntryDataset( mapCBParameters, catVar );
     }//end iEntry
@@ -546,7 +545,8 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
      unsigned index = systIndex.size();
      if ( posSyst == systIndex.end() ) {
        systIndex[systName] = index;
-       linesName.push_back( ReplaceString("_","-")(systName) );
+       //       linesName.push_back( ReplaceString("_","-")(systName) );
+       linesName.push_back( systName );
      }
      else index = posSyst->second;
      FillArray( *itDataStore, index, tables );
@@ -694,7 +694,7 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
   stream.close();
   string directory = texName.substr( 0, texName.find_last_of("/"));
   string commandLine = "pdflatex -interaction=batchmode " + StripString(texName);
-  //<<  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
+  system( string( "cd " + directory + " && " + commandLine + " && " + commandLine ).c_str() );
 
   if ( m_debug ) cout << "FitSystematic::DrawDists end" << endl;
 }

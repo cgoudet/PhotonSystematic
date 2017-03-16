@@ -11,6 +11,7 @@ from SideFunction import *
 from DrawOptions import *
 #categoriesNames=[ "Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
 categoriesNames = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
+categoriesNames = ["Inclusive", "GGH-0J-CEN", "GGH-0J-FWD","GGH-1J-LOW","GGH-1J-MED","GGH-1J-HIGH","GGH-1J-BSM","GGH-2J-LOW","GGH-2J-MED","GGH-2J-HIGH","GGH-2J-BSM","VBF-HjjLO-loose","VBF-HjjLO-tight","VBF-HjjHI-loose","VBF-HjjHI-tight","VHhad-loose","VHhad-tight","QQH-BSM", "VHMET-LOW","VHMET-MED","VHMET-BSM","VHlep-LOW","VHlep-HIGH","VHdilep-LOW", "VHdilep-HIGH","tHhad-4j2b", "tHhad-4j1b", "ttHhad-BDT4", "ttHhad-BDT3",  "ttHhad-BDT2", "ttHhad-BDT1", "ttHlep", "tHlep-1fwd", "tHlep-0fwd"]
 #==========================================
 def GetTLimGaus( mapResults, side , fluct = [ 'up' ], syst = [ 'EG_RESOLUTION_ALL' ] ) :
 
@@ -332,7 +333,8 @@ def CompareFit( directories, prefix='CompareModels' ) :
     if not directories : return
 
     categories = [ 'Inclusive', "ggH-CenLow", "ggH-CenHigh", "ggH-FwdLow", "ggH-FwdHigh", "VBFloose", "VBFtight", "VHhad-loose", "VHhad-tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
-    if not 'h013' in directories[0] : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
+    if 'h014' in directories[0] : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
+    elif 'h015' in directories[0] : categories= ["Inclusive", "GGH-0J-CEN", "GGH-0J-FWD","GGH-1J-LOW","GGH-1J-MED","GGH-1J-HIGH","GGH-1J-BSM","GGH-2J-LOW","GGH-2J-MED","GGH-2J-HIGH","GGH-2J-BSM","VBF-HjjLO-loose","VBF-HjjLO-tight","VBF-HjjHI-loose","VBF-HjjHI-tight","VHhad-loose","VHhad-tight","QQH-BSM", "VHMET-LOW","VHMET-MED","VHMET-BSM","VHlep-LOW","VHlep-HIGH","VHdilep-LOW", "VHdilep-HIGH","tHhad-4j2b", "tHhad-4j1b", "ttHhad-BDT4", "ttHhad-BDT3",  "ttHhad-BDT2", "ttHhad-BDT1", "ttHlep", "tHlep-1fwd", "tHlep-0fwd"]
 
     variables = [ 'mean', 'sigma' ]
 
