@@ -178,7 +178,9 @@ bool FillNtuple::FillEntry( const string &systName ) {
     vars["catCoupBDT"] = var::catCoup_Moriond2017BDT();
   }
 
-  if ( vars.empty() ) return false;
+  bool isPassed = var::isPassed();
+  if ( vars.empty() && isPassed ) throw runtime_error( "FillNtuple::FillEntry : passing event has default value." );
+  else if ( !isPassed ) return false;
 
   for ( const string itSyst:m_systVarsName ) {
     const string outName { ( systName =="" ? "" : systName+"_") +itSyst };

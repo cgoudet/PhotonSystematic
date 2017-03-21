@@ -1,5 +1,5 @@
 fitMethod=fitAll_fitExtPOI_rootFit
-analysis=Couplings33
+analysis=CouplingsBDT
 postMerge=1
 
 mergeNP=EG_SCALE_S12__ETABIN0  EG_SCALE_S12_BARREL

@@ -28,7 +28,7 @@ def LaunchFile( directory, fileName ) :
 
     commandLine = 'runFillNtuple ' + ' '.join( [ key + ' ' + options[key] for key in options ] )
     print( commandLine )
-#    os.system( commandLine )
+    os.system( commandLine )
 #=================================
 def BatchFile( directory, inFile ) :
     if UpdateRecord( directory, inFile ) : return
