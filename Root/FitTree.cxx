@@ -41,7 +41,7 @@ using boost::extents;
 #include <sstream>
 #include <istream>
 #include <ostream>
-
+#include <functional>
 using std::for_each;
 using std::tuple;
 using std::istream;
@@ -63,6 +63,7 @@ using std::max;
 using std::ostream_iterator;
 using std::bitset;
 using std::to_string;
+using std::remove;
 using namespace ChrisLib;
 
 FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings33"}, m_fitMethod{"fitAll_fitExtPOI"}, m_debug{0}, m_postMerge(0)
@@ -85,7 +86,7 @@ FitSystematic::FitSystematic( const string &name, const string &confFile ) : Fit
 }
 
 void FitSystematic::Configure( const string &confFile ) {
-  vector<string> vectNPName, systOnly, inMergeNP;
+  vector<string> vectNPName, systOnly, inMergeNP, catMergeInput;
   po::options_description configOptions("configOptions");
   configOptions.add_options()
     ( "nBins", po::value<unsigned int>( &m_nBins ), "Number of bins for binned fit." )
@@ -94,6 +95,7 @@ void FitSystematic::Configure( const string &confFile ) {
     ( "catOnly", po::value<vector<unsigned>>( &m_catOnly )->multitoken(), "" )
     ( "NPName", po::value<vector<string>>( &vectNPName )->multitoken(), "" )
     ( "mergeNP", po::value<vector<string>>( &inMergeNP )->multitoken(), "" )
+    ( "categoryMerging", po::value<vector<string>>( &catMergeInput ), "" )
     ( "postMerge", po::value<bool>( &m_postMerge ), "" )
     ;
 
@@ -110,11 +112,15 @@ void FitSystematic::Configure( const string &confFile ) {
   const list<string>  allowedAnalyses = GetAllowedAnalyses();
   if ( find( allowedAnalyses.begin(), allowedAnalyses.end(), m_analysis ) == allowedAnalyses.end() ) throw invalid_argument( "FillDataset : Wrong analysis provided : " + m_analysis );
 
+
+
   if ( m_analysis == "Couplings13" ) m_categoriesName = {"Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep"};
   else if ( m_analysis == "DiffXS" ) m_categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( m_analysis == "DiffXSPhi" ) m_categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
   //  else m_categoriesName = { "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" };
   else m_categoriesName = { "Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"}; 
+
+
   for ( auto vMergeLine : inMergeNP ) {
     vector<string> dumV;
     ParseVector( vMergeLine, dumV );
@@ -122,6 +128,8 @@ void FitSystematic::Configure( const string &confFile ) {
   }
 
   sort( m_catOnly.begin(), m_catOnly.end() );
+
+  for ( auto &s : catMergeInput ) FillCategoryMerging(s);
 }
 
 //===
@@ -186,6 +194,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
+      if ( iEntry % 30 ) continue;
       FillEntryDataset( mapCBParameters, catVar );
     }//end iEntry
 
@@ -214,11 +223,12 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
    */
   for ( list<string>::const_iterator itNPName = m_NPName.begin(); itNPName!=m_NPName.end(); ++itNPName ) {
     if ( itNPName->find("PH_EFF") != string::npos || itNPName->find("PH_Iso")!=string::npos ) continue;
+    //    if ( itNPName->find("EG_SCALE_MAT") == string::npos ) continue;
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
     string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
     int category = static_cast<int>(m_mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
-    tuple<double,double,int> currentEvent { 0, 0, category };
+    tuple<double,double,int> currentEvent { 0, 0, MergedCategory(category) };
 
     // fill mass, weight and category into a tuple
     FillEventProperties( currentEvent, observables, branchPrefix );
@@ -243,6 +253,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
 
   for ( auto itChannels : eventsPerChannel ) {
     int category = std::get<2>(itChannels.second);
+
     string name = itChannels.first;
     double mass = std::get<0>( itChannels.second );
     map<string,list<double>>::iterator itList = masses.find( name );
@@ -348,7 +359,7 @@ void FitSystematic::GetCommonVars( list<string> &commonVars ) {
 //===
 
 void FitSystematic::Run( const vector<string> &rootFilesName ) {
-
+  gErrorIgnoreLevel=kError;
   FillDataset( rootFilesName );
   CreateDataStoreList();
 
@@ -400,16 +411,34 @@ void FitSystematic::CreateDataStoreList() {
   m_lDataStore.clear();
   m_NPName.clear();
   unsigned maxCat=0;
+
   for ( MapSet::const_iterator itMapSet = m_datasets.begin(); itMapSet!=m_datasets.end(); ++itMapSet ) {
     m_NPName.push_back( itMapSet->first );
     maxCat = std::max( maxCat, static_cast<unsigned>(itMapSet->second.size())-1 );
+    unsigned skippedCategories{0};
     for ( unsigned int iCat = 0; iCat < itMapSet->second.size(); ++iCat ) {
-	if ( !itMapSet->second[iCat] ) continue;
-	m_lDataStore.push_back( DataStore( itMapSet->first, iCat, itMapSet->second[iCat] ) );
+      if ( !itMapSet->second[iCat] ) {
+	if ( m_categoriesMerging[iCat].index!=static_cast<int>(iCat) && m_categoriesMerging[iCat].index!=-1 ) ++skippedCategories;
+	continue;
+      }
+      m_lDataStore.push_back( DataStore( itMapSet->first, iCat-skippedCategories, itMapSet->second[iCat] ) );
     }
   }
-
   if ( maxCat!=m_categoriesName.size()-1 ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
+  
+  for ( unsigned i=0; i<m_categoriesName.size(); ++i )  {
+      if ( m_categoriesMerging.size()<=i || m_categoriesMerging[i].index==-1 ) continue;
+      if ( static_cast<int>(i)!=m_categoriesMerging[i].index ) m_categoriesName[i] = "toRemove";
+      else m_categoriesName[i] = m_categoriesMerging[i].name;
+    }
+	  
+	  auto itToRemove = find(m_categoriesName.begin(), m_categoriesName.end(), "toRemove" );
+	while ( itToRemove != m_categoriesName.end() ) {
+	  m_categoriesName.erase( itToRemove );
+	  itToRemove = find(m_categoriesName.begin(), m_categoriesName.end(), "toRemove" );
+	}
+	  
+
 
 }
 //====================================================================
@@ -808,7 +837,7 @@ string FitSystematic::MergedName( const string &NPName ) {
 }
 //======================================================
  void FitSystematic::PostMergeResult() {
-   if ( m_debug )cout << "PostMergeResults" << endl;
+   cout << "PostMergeResults" << endl;
    map<string,vector<DataStore>> mergedStores;
 
    m_NPName.clear();
@@ -817,6 +846,7 @@ string FitSystematic::MergedName( const string &NPName ) {
 
      m_NPName.push_back( mergedName );
      if ( mergedName == itDataStore->GetName() ) continue;
+     cout << "merging : " << itDataStore->GetName() << " " << mergedName << endl;
      unsigned category = itDataStore->GetCategory();
      vector<DataStore> &vStore = mergedStores[mergedName];
      while ( category >= vStore.size() ) {
@@ -838,6 +868,7 @@ string FitSystematic::MergedName( const string &NPName ) {
 
    m_lDataStore.sort();
    m_NPName.sort();
+   //   m_NPName.erase( std::unique( m_NPName.begin(), m_NPName.end() ), m_NPName.end() );
    m_name+="_postMerged";
 
    
@@ -846,3 +877,42 @@ string FitSystematic::MergedName( const string &NPName ) {
 
    if ( m_debug )cout << "PostMergeResults end" << endl;
  }
+
+
+//==============================================
+int FitSystematic::MergedCategory( int initialCategory ) {
+  if ( static_cast<int>(m_categoriesMerging.size()) <= initialCategory 
+       || m_categoriesMerging[initialCategory].index==-1 ) return initialCategory;
+
+  return m_categoriesMerging[initialCategory].index;
+}
+
+//==========================================
+void FitSystematic::FillCategoryMerging( const std::string &inputLine ) {
+  vector<string> parserString;
+  ParseVector( inputLine, parserString );
+  unsigned size = parserString.size();
+  int inIndex{-1}, outIndex{-1};
+  string name;
+  if ( size==0 ) return;
+  else if ( size==1 ) inIndex = stoi( parserString.front() );
+  else {
+    try {
+      inIndex = stoi( parserString.front() );
+    }
+    catch ( invalid_argument e ) {
+      name = parserString.front();
+      inIndex = stoi( parserString[1]);
+    }
+    outIndex = stoi( parserString[1] );
+  }
+
+  if ( inIndex == -1 ) return;
+  if ( outIndex == -1 ) outIndex=inIndex;
+
+  while ( m_categoriesMerging.size() <= static_cast<unsigned>(inIndex) ) {
+    m_categoriesMerging.push_back(CategMerging({-1, "" }));
+  }
+
+  m_categoriesMerging[inIndex] = CategMerging( { outIndex, name } );
+}

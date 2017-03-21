@@ -21,6 +21,10 @@
 typedef std::map<std::string,std::vector<RooAbsData*>> MapSet;
 typedef std::map<std::string,std::vector<RooPlot*>> MapPlot;
 
+struct CategMerging {
+  int index;
+  std::string name;
+};
 
 class FitSystematic {
  public :
@@ -67,9 +71,10 @@ class FitSystematic {
   void Run( const std::vector<std::string> &rootFilesName );
   void PostMergeResult();
   std::string MergedName( const std::string &NPName );
+  int MergedCategory( int initialCategory );
+  void FillCategoryMerging( const std::string &inputLine );
 
- 
- private :
+  private :
   unsigned m_nBins;
   std::string m_analysis;
   std::string m_fitMethod;
@@ -86,6 +91,7 @@ class FitSystematic {
   std::map<std::string, std::string> m_mergeNP;
   int m_debug;
   bool m_postMerge;
+  std::vector<CategMerging> m_categoriesMerging;
 
 };
 
@@ -122,5 +128,7 @@ template<typename Type1, typename Type2> void ExtendMapVect( std::map<Type1,std:
   mapVect[key].insert( vect->end(), dumList.begin(), dumList.end() );
   
 }
+
+
 
 #endif
