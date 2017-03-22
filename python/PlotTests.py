@@ -5,13 +5,24 @@ import matplotlib
 import matplotlib.pyplot as plt
 import sys
 import os
+from ROOT import *
+from math import sqrt
 #sys.path.append(os.path.abspath("/afs/in2p3.fr/home/c/cgoudet/private/Calibration/PlotFunctions/python"))
 sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/PlotFunctions/python"))
 from SideFunction import *
 from DrawOptions import *
+sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/Template/python"))
+from Functions_MeasureAlphaSigma import *
 #categoriesNames=[ "Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
 categoriesNames = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
 categoriesNames = ["Inclusive", "GGH-0J-CEN", "GGH-0J-FWD","GGH-1J-LOW","GGH-1J-MED","GGH-1J-HIGH","GGH-1J-BSM","GGH-2J-LOW","GGH-2J-MED","GGH-2J-HIGH","GGH-2J-BSM","VBF-HjjLO-loose","VBF-HjjLO-tight","VBF-HjjHI-loose","VBF-HjjHI-tight","VHhad-loose","VHhad-tight","QQH-BSM", "VHMET-LOW","VHMET-MED","VHMET-BSM","VHlep-LOW","VHlep-HIGH","VHdilep-LOW", "VHdilep-HIGH","tHhad-4j2b", "tHhad-4j1b", "ttHhad-BDT4", "ttHhad-BDT3",  "ttHhad-BDT2", "ttHhad-BDT1", "ttHlep", "tHlep-1fwd", "tHlep-0fwd"]
+
+def GetCategories( prod ) :
+    categories = [ 'Inclusive', "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
+    if prod=='h014' : categories = [ "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
+    elif prod == 'h015catMerge' : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_HIGH","VHlep_LOW","VHlep_HIGH","VHdilep","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    elif prod == 'h015' : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    return categories    
 #==========================================
 def GetTLimGaus( mapResults, side , fluct = [ 'up' ], syst = [ 'EG_RESOLUTION_ALL' ] ) :
 
@@ -332,10 +343,10 @@ def CompareFit( directories, prefix='CompareModels' ) :
     """
     if not directories : return
 
-    categories = [ 'Inclusive', "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
-    if 'h014' in directories[0] : categories = [ "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
-    elif 'catMerge' in directories[0] : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_HIGH","VHlep_LOW","VHlep_HIGH","VHdilep","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
-    elif 'h015' in directories[0] : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    prod = 'h015'
+    if 'h014' in directories[0] : prod = 'h014'
+    elif 'catMerge' in directories[0] : prod = 'h015catMerge'
+    categories = GetCategories( prod )
 
     variables = [ 'mean', 'sigma' ]
 
@@ -344,6 +355,151 @@ def CompareFit( directories, prefix='CompareModels' ) :
     nDir = len(directories)
     labelDir = directories[0]+StripString(directories[0][:-1], 1, 0 ) if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'+prefix
     os.system( 'pdfjoin ' + ' '.join(boostFiles) + ' --outfile ' + labelDir +'_Systematics.pdf' )
+
+#=================================
+def GetContainers( directory ) :
+    """
+    Read the listContainers of a file to retrieve the name of NP in the model
+    """
+    fileName = directory + 'listContainers.txt'
+    listFile = open( fileName )
+    output = [ line.replace('containerName=', '').replace('\n', '') for line in listFile if 'containerName' in line ]
+    listFile.close()
+    return output
+#=================================
+def JobOption( directory, NPName, isInclusive=0 ) :
+    """
+    Create the job options for the LaunchBatchTemplate method
+    """
+    output = []
+    label = StripString(directory[:-1], 1, 0)
+    output.append( label+'_'+NPName + ( '_incl' if isInclusive else '' ) )
+
+    ntuples = listFiles( directory+'ntuple/', '*.root' )
+    output+= [ ','.join(ntuples) ]*2
+
+    isUp = '__1up' in NPName
+    label = NPName.replace('__1up', '').replace('1down', '' ) + '_'
+
+    dataPrefix = NPName+'_' if isUp else '' 
+    MCPrefix = NPName+'_' if not isUp else '' 
+    templateOptions = ['dataBranchVarNames=MASS ' + dataPrefix+'m_yy'
+                       ,'dataBranchVarNames=ETA_CALO_2 '+ dataPrefix+'catCoupBDT'
+                       ,'dataBranchVarNames=ETA_CALO_1 '+dataPrefix+'catCoupBDT'
+                       ,'dataBranchWeightName=weight'
+                       ,'MCBranchVarNames=MASS '+MCPrefix+'m_yy'
+                       ,'MCBranchVarNames=ETA_CALO_2 '+MCPrefix+'catCoupBDT'
+                       ,'MCBranchVarNames=ETA_CALO_1 '+MCPrefix+'catCoupBDT'
+                       ,'MCBranchWeightName=weight'
+                       ,'thresholdMass=0'
+                       ,'ZMassMin=115'
+                       ,'ZMassMax=135'
+                       ]                  
+    categoriesLimits = range(1, 35 )
+    categoriesLimits.remove(20)
+    categoriesLimits.remove(24)
+
+    if isInclusive : categoriesLimits=[-0.5, 0.5]
+#Harcode the merging of VHdilep and VHMET
+    print( categoriesLimits )
+    templateOptions.append( 'etaBins='+' '.join( [ str(v-0.5) for v in categoriesLimits ] ))
+    print(templateOptions )
+    output.append( templateOptions )
+    output.append( 0 )
+    return output
+#=================================
+def LaunchTemplates( directory ) :
+    """
+    Launch on the batch the measurement of systematics 
+    """
+    NPNames = GetContainers( directory )
+    directory = AbsPath( directory )
+
+
+    jobOptions = [ JobOption( directory, np, isInclusive ) for np in NPNames for isInclusive in range(0,2) ]
+    [ LaunchBatchTemplate( jb ) for jb in jobOptions ]
+
+#=================================
+def GetResolutionValues( inFile ) :
+    label=StripString(inFile[:-1])
+    if '_EG' in label : label = label[:label.find('_EG')]
+    elif '_PH' in label : label = label[:label.find('_PH')]
+    label+='_BDT_catMerge_root'
+    fileName = '/sps/atlas/c/cgoudet/Hgam/FrameWork/Results/' + label + '/' + label+'_SystVariation_values.csv'
+
+    outValues=[]
+    csvFile=open(fileName)
+    for line in csvFile :
+        line = line.split(',')
+        if line[0]!='' : continue
+        outValues.append( float(line[3]) )
+    csvFile.close()
+
+    return outValues
+#=================================
+def TemplateToList( tabular, inFile, var='alpha' ) : 
+    """
+    Read output of Template method and fill a dictionary
+    """
+    isInclusive = '_incl' in inFile
+    isUp = '__1up' in inFile
+    label = StripString( inFile )
+    label = label[:label.rfind('__')]
+    if 'EG_' in label : label = label[label.find('EG_'):]
+    elif 'PH_'in label : label = label[label.find('PH_'):]
+
+    rootFile = TFile( inFile )
+    hist = rootFile.Get( 'measScale_' + var)
+    hist.GetName()#line used to force cast into TH1
+    nBins = hist.GetNbinsX()
+
+    resVals = GetResolutionValues( inFile );
+
+    if not label in tabular : tabular[label] = [-99]*((nBins+1)*2)
+    values = tabular[label]
+    size = len(values)
+    if size ==2 and not nBins  : values+=[-99]*(nBins*2)
+
+    for iBin in range( 0, nBins ) :
+        val = hist.GetBinContent(iBin+1) 
+        index = (not isInclusive) + iBin
+        if not isUp and var=='alpha': val = -val/(1+val)
+        elif var == 'c' :
+            nomRMS = resVals[index]
+            print( iBin, index, nomRMS )
+            ratio = val*125/nomRMS
+            if isUp : val = sqrt( 1+val*val)-1
+            else : val = sqrt( 1-val*val)-1 
+        values[ index*2 + isUp ] = val
+
+#=================================
+def PrintValuesCategories( values, NPName ) :
+    line = NPName+','
+    line += ','.join([ str(val) for val in values ])
+    return line
+#=================================
+def ListToCSV( outFileName, tabular, var ) :
+    prod = 'h015catMerge'
+    if not 'catMerge' in outFileName : prod = 'h015'
+    categories = GetCategories( prod )
+    
+    outFile = open( outFileName, 'w' )
+    varName = 'mean' if var=='alpha' else 'sigma'
+    outFile.write( varName +','+','.join( [ cat+fluct for cat in categories for fluct in ['Down', 'Up' ] ])+'\n')
+    outFile.write( '\n'.join( [ PrintValuesCategories( tabular[key], key )for key in tabular] ) )
+    outFile.close()
+        
+#=================================
+def TreatTemplates( outDirectory, inFiles, var='alpha' ) :
+    """
+    Deal with output of Template framework to output a similar format as FitTree
+    """
+    tabular = {}
+    [ TemplateToList( tabular, f, var ) for f in inFiles ]
+    outFileName = AddSlash(outDirectory) + StripString( outDirectory[:-1], 1, 0 ) + '_'+var+'.csv'
+    print( 'writting in : ' + outFileName )
+    ListToCSV( outFileName, tabular, var )
+
 #==========================================
 def parseArgs():
     """
@@ -364,7 +520,7 @@ def parseArgs():
     parser.add_argument( '--prefix', type=str, default='CompareModels' )
     parser.add_argument('directories', type=str, help="", nargs='*' )
     args = parser.parse_args()
-    args.directories = [ AddSlash(d) for d in args.directories ]
+    if args.mode !=4 : args.directories = [ AddSlash(d) for d in args.directories ]
     return args
 
 #========================================
@@ -376,6 +532,8 @@ def main():
     args = parseArgs()
     if args.mode==0 : CompareFit( args.directories, args.prefix )
     elif args.mode==1 : [ CompareFit( [vDir], args.prefix ) for vDir in args.directories ]
+    elif args.mode==3 : LaunchTemplates( args.directory )
+    elif args.mode==4 : [ TreatTemplates( args.prefix, args.directories, var ) for var in ['alpha', 'c' ] ]
 
 # The program entrance
 if __name__ == '__main__':
