@@ -194,7 +194,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
-      if ( iEntry % 30 ) continue;
+      //      if ( iEntry % 30 ) continue;
       FillEntryDataset( mapCBParameters, catVar );
     }//end iEntry
 

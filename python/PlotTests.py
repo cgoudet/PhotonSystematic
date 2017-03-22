@@ -287,7 +287,7 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     for d in directories : 
         nDir+=1
         labelDir = StripString(d[:-1], 1, 0 )
-        [ do.AddOption( 'rootFileName',d+labelDir+'_SystVariation_'+variable+'.csv' ) for i in range(0, 2)];
+        [ do.AddOption( 'rootFileName',d+labelDir+'_SystVariation_'+('postMerged_' if 'postMerge' in d else '' )+variable+'.csv' ) for i in range(0, 2)];
         [ do.AddOption( 'legend', labelDir + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
 
 
@@ -332,9 +332,10 @@ def CompareFit( directories, prefix='CompareModels' ) :
     """
     if not directories : return
 
-    categories = [ 'Inclusive', "ggH-CenLow", "ggH-CenHigh", "ggH-FwdLow", "ggH-FwdHigh", "VBFloose", "VBFtight", "VHhad-loose", "VHhad-tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
-    if 'h014' in directories[0] : categories = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
-    elif 'h015' in directories[0] : categories= ["Inclusive", "GGH-0J-CEN", "GGH-0J-FWD","GGH-1J-LOW","GGH-1J-MED","GGH-1J-HIGH","GGH-1J-BSM","GGH-2J-LOW","GGH-2J-MED","GGH-2J-HIGH","GGH-2J-BSM","VBF-HjjLO-loose","VBF-HjjLO-tight","VBF-HjjHI-loose","VBF-HjjHI-tight","VHhad-loose","VHhad-tight","QQH-BSM", "VHMET-LOW","VHMET-MED","VHMET-BSM","VHlep-LOW","VHlep-HIGH","VHdilep-LOW", "VHdilep-HIGH","tHhad-4j2b", "tHhad-4j1b", "ttHhad-BDT4", "ttHhad-BDT3",  "ttHhad-BDT2", "ttHhad-BDT1", "ttHlep", "tHlep-1fwd", "tHlep-0fwd"]
+    categories = [ 'Inclusive', "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
+    if 'h014' in directories[0] : categories = [ "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
+    elif 'catMerge' in directories[0] : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED_BSM","VHlep_LOW","VHlep_HIGH","VHdilep","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    elif 'h015' in directories[0] : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
 
     variables = [ 'mean', 'sigma' ]
 

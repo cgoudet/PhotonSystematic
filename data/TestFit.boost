@@ -1,3 +1,9 @@
 fitMethod=fitAll_fitExtPOI_rootFit
 analysis=CouplingsBDT
 
+categoryMerging= VHMET_MED_BSM  19
+categoryMerging= 20 19
+
+categoryMerging= VHdilep 23 
+categoryMerging= 24 23
+
