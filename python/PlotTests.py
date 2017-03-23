@@ -395,6 +395,8 @@ def JobOption( directory, NPName, isInclusive=0 ) :
                        ,'ZMassMin=115'
                        ,'ZMassMax=135'
                        ,'sigmaMax=0.02'
+                       ,'alphaMin=-0.02'
+                       ,'alphaMax=0.02'
                        ]                  
     categoriesLimits = range(1, 35 )
     categoriesLimits.remove(20)
@@ -429,13 +431,14 @@ def LaunchTemplates( directory ) :
     jobOptions = [ JobOption( directory, np, isInclusive ) for np in NPNames for isInclusive in range(0,2) ]
     batchFiles = [ LaunchBatchTemplate( jb ) for jb in jobOptions ]
 
-    nJobs=1
+    nJobs=20
     separatedFiles = []
     [ separatedFiles.append([]) for i in range(0, nJobs) ]
     index=0
     for f in batchFiles :
         separatedFiles[index].append(f)
         index=(index+1)%nJobs
+
     [ LaunchMerged( f ) for f in separatedFiles ]
 
 #=================================
@@ -497,14 +500,14 @@ def PrintValuesCategories( values, NPName ) :
     return line
 #=================================
 def ListToCSV( outFileName, tabular, var ) :
-    prod = 'h015catMerge'
-    if not 'catMerge' in outFileName : prod = 'h015'
-    categories = GetCategories( prod )
-    
     outFile = open( outFileName, 'w' )
     varName = 'mean' if var in ['alpha', 'mean'] else 'sigma'
 
     dictSize = len(tabular.values()[0])
+    prod = 'h015catMerge'
+    if dictSize == 34 : prod='h015'
+    categories = GetCategories( prod )
+
     fluctuations=[''] if len(categories)==dictSize else ['Down', 'Up' ]
     outFile.write( varName +','+','.join( [ cat+fluct for cat in categories for fluct in fluctuations ])+'\n')
     outFile.write( '\n'.join( [ PrintValuesCategories( tabular[key], key )for key in tabular] ) )
