@@ -66,7 +66,7 @@ def MoveSample( inFileName ) :
     prod = 'h014'
     if 'h015' in inFileName : prod='h015'
 
-    model = 'ALL'
+    model = '1NP'
     if 'PhotonAllSys' in inFileName : model = 'FULL'
     directory += prod + '_' + model+'/ntuple/'+inFileName+( '.root' if not '.root' in inFileName else '')
 

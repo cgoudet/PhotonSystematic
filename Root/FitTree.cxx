@@ -156,7 +156,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     mapCBParameters[*it] = new RooRealVar( it->c_str(), it->c_str(), 0 );
     if ( *it=="weight" ) mapCBParameters[*it]->SetTitle( weightName.c_str() );
     else {
-      if ( m_fitMethod.find( "range20" ) !=string::npos ) mapCBParameters[*it]->setRange(115, 135);
+      if ( m_fitMethod.find( "range20" ) !=string::npos || m_fitMethod.find("rootFit")!=string::npos ) mapCBParameters[*it]->setRange(115, 135);
       else if ( m_fitMethod.find( "range10" ) !=string::npos ) mapCBParameters[*it]->setRange(120, 130);
       else mapCBParameters[*it]->setRange(105, 160);
       double min = mapCBParameters[*it]->getMin();

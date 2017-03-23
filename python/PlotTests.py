@@ -399,14 +399,25 @@ def JobOption( directory, NPName, isInclusive=0 ) :
     categoriesLimits.remove(20)
     categoriesLimits.remove(24)
 
-    if isInclusive : categoriesLimits=[-0.5, 0.5]
+    if isInclusive : categoriesLimits=[0, 35]
 #Harcode the merging of VHdilep and VHMET
-    print( categoriesLimits )
     templateOptions.append( 'etaBins='+' '.join( [ str(v-0.5) for v in categoriesLimits ] ))
-    print(templateOptions )
     output.append( templateOptions )
     output.append( 0 )
     return output
+#=================================
+def LaunchMerged( batchFiles ) :
+    mergeName=batchFiles[0].replace('.sh', 'merged.sh')
+    MergeBatchFiles( mergeName, batchFiles )
+
+    path="/sps/atlas/a/aguerguichon/Calibration/PreRec/Log/"
+
+    logFile=StripString(mergeName, 0, 1).replace('Batch', 'Log' )
+    launchLine='~/sub28.sh ' + StripString(mergeName) + ' ' \
+        + logFile + '.log ' \
+        + logFile + '.err ' \
+        + mergeName
+    os.system( launchLine )
 #=================================
 def LaunchTemplates( directory ) :
     """
@@ -414,10 +425,17 @@ def LaunchTemplates( directory ) :
     """
     NPNames = GetContainers( directory )
     directory = AbsPath( directory )
-
-
     jobOptions = [ JobOption( directory, np, isInclusive ) for np in NPNames for isInclusive in range(0,2) ]
-    [ LaunchBatchTemplate( jb ) for jb in jobOptions ]
+    batchFiles = [ LaunchBatchTemplate( jb ) for jb in jobOptions ]
+
+    nJobs=10
+    separatedFiles = []
+    [ separatedFiles.append([]) for i in range(0, nJobs) ]
+    index=0
+    for f in batchFiles :
+        separatedFiles[index].append(f)
+        index=(index+1)%nJobs
+    [ LaunchMerged( f ) for f in separatedFiles ]
 
 #=================================
 def GetResolutionValues( inFile ) :
@@ -466,10 +484,10 @@ def TemplateToList( tabular, inFile, var='alpha' ) :
         if not isUp and var=='alpha': val = -val/(1+val)
         elif var == 'c' :
             nomRMS = resVals[index]
-            print( iBin, index, nomRMS )
             ratio = val*125/nomRMS
-            if isUp : val = sqrt( 1+val*val)-1
-            else : val = sqrt( 1-val*val)-1 
+            if isUp : val = sqrt( 1+ratio*ratio)-1
+            else : val = sqrt( 1-ratio*ratio)-1 
+            
         values[ index*2 + isUp ] = val
 
 #=================================
@@ -496,7 +514,8 @@ def TreatTemplates( outDirectory, inFiles, var='alpha' ) :
     """
     tabular = {}
     [ TemplateToList( tabular, f, var ) for f in inFiles ]
-    outFileName = AddSlash(outDirectory) + StripString( outDirectory[:-1], 1, 0 ) + '_'+var+'.csv'
+    varName = 'mean' if var=='alpha' else 'sigma'
+    outFileName = AddSlash(outDirectory) + StripString( outDirectory[:-1], 1, 0 ) + '_'+varName+'.csv'
     print( 'writting in : ' + outFileName )
     ListToCSV( outFileName, tabular, var )
 
@@ -532,7 +551,7 @@ def main():
     args = parseArgs()
     if args.mode==0 : CompareFit( args.directories, args.prefix )
     elif args.mode==1 : [ CompareFit( [vDir], args.prefix ) for vDir in args.directories ]
-    elif args.mode==3 : LaunchTemplates( args.directory )
+    elif args.mode==3 : [ LaunchTemplates( d ) for d in args.directories ] 
     elif args.mode==4 : [ TreatTemplates( args.prefix, args.directories, var ) for var in ['alpha', 'c' ] ]
 
 # The program entrance
