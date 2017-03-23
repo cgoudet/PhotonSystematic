@@ -20,6 +20,9 @@ class DataStore {
   void Print(); 
 
   void QuadSum( const DataStore &store );
+  void Sum( const DataStore &store );
+  void Scale( const DataStore &store );
+  void Normalize();
 
   double GetAlphaHi() const { return m_alphaHi; }
   double GetAlphaLow() const { return m_alphaLow; }

@@ -839,6 +839,7 @@ string FitSystematic::MergedName( const string &NPName ) {
  void FitSystematic::PostMergeResult() {
    cout << "PostMergeResults" << endl;
    map<string,vector<DataStore>> mergedStores;
+   map<string,vector<DataStore>> mergedLinear;
 
    m_NPName.clear();
    for ( auto itDataStore = m_lDataStore.begin(); itDataStore!=m_lDataStore.end(); ++itDataStore ) {
@@ -849,21 +850,32 @@ string FitSystematic::MergedName( const string &NPName ) {
      cout << "merging : " << itDataStore->GetName() << " " << mergedName << endl;
      unsigned category = itDataStore->GetCategory();
      vector<DataStore> &vStore = mergedStores[mergedName];
+     vector<DataStore> &lStore = mergedLinear[mergedName];
      while ( category >= vStore.size() ) {
        vStore.push_back( DataStore( mergedName, vStore.size(), 0) );
        vStore.back().FillDSCB( 0, 0, 0, 0, 0, 0 );
      }
 
+     while ( category >= lStore.size() ) {
+       lStore.push_back( DataStore( mergedName, lStore.size(), 0) );
+       lStore.back().FillDSCB( 0, 0, 0, 0, 0, 0 );
+     }
+
      vStore[category].QuadSum(*itDataStore);
+     lStore[category].Sum(*itDataStore);
 
      m_lDataStore.erase( itDataStore );
      --itDataStore;
    }
 
-   for ( auto vStore : mergedStores ) 
-     for ( auto store : vStore.second )
-       m_lDataStore.push_back(store);
-
+   for ( auto vStore= mergedStores.begin(); vStore!=mergedStores.end(); ++vStore ) {
+     vector<DataStore> lStore = mergedLinear[vStore->first];
+     for ( unsigned int iCat=0; iCat<vStore->second.size(); ++iCat ) {
+	 lStore[iCat].Normalize();
+	 vStore->second[iCat].Scale( lStore[iCat] );
+	 m_lDataStore.push_back(vStore->second[iCat]);
+       }
+   }
 
 
    m_lDataStore.sort();

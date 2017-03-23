@@ -394,6 +394,7 @@ def JobOption( directory, NPName, isInclusive=0 ) :
                        ,'thresholdMass=0'
                        ,'ZMassMin=115'
                        ,'ZMassMax=135'
+                       ,'sigmaMax=0.02'
                        ]                  
     categoriesLimits = range(1, 35 )
     categoriesLimits.remove(20)
@@ -428,7 +429,7 @@ def LaunchTemplates( directory ) :
     jobOptions = [ JobOption( directory, np, isInclusive ) for np in NPNames for isInclusive in range(0,2) ]
     batchFiles = [ LaunchBatchTemplate( jb ) for jb in jobOptions ]
 
-    nJobs=10
+    nJobs=1
     separatedFiles = []
     [ separatedFiles.append([]) for i in range(0, nJobs) ]
     index=0
@@ -459,6 +460,7 @@ def TemplateToList( tabular, inFile, var='alpha' ) :
     """
     Read output of Template method and fill a dictionary
     """
+    print( inFile )
     isInclusive = '_incl' in inFile
     isUp = '__1up' in inFile
     label = StripString( inFile )
@@ -470,13 +472,12 @@ def TemplateToList( tabular, inFile, var='alpha' ) :
     hist = rootFile.Get( 'measScale_' + var)
     hist.GetName()#line used to force cast into TH1
     nBins = hist.GetNbinsX()
-
     resVals = GetResolutionValues( inFile );
 
-    if not label in tabular : tabular[label] = [-99]*((nBins+1)*2)
+    if not label in tabular : tabular[label] = [-99]*2
     values = tabular[label]
     size = len(values)
-    if size ==2 and not nBins  : values+=[-99]*(nBins*2)
+    if size ==2 and nBins!=1  : values+=[-99]*(nBins*2)
 
     for iBin in range( 0, nBins ) :
         val = hist.GetBinContent(iBin+1) 
@@ -487,7 +488,6 @@ def TemplateToList( tabular, inFile, var='alpha' ) :
             ratio = val*125/nomRMS
             if isUp : val = sqrt( 1+ratio*ratio)-1
             else : val = sqrt( 1-ratio*ratio)-1 
-            
         values[ index*2 + isUp ] = val
 
 #=================================
@@ -502,8 +502,11 @@ def ListToCSV( outFileName, tabular, var ) :
     categories = GetCategories( prod )
     
     outFile = open( outFileName, 'w' )
-    varName = 'mean' if var=='alpha' else 'sigma'
-    outFile.write( varName +','+','.join( [ cat+fluct for cat in categories for fluct in ['Down', 'Up' ] ])+'\n')
+    varName = 'mean' if var in ['alpha', 'mean'] else 'sigma'
+
+    dictSize = len(tabular.values()[0])
+    fluctuations=[''] if len(categories)==dictSize else ['Down', 'Up' ]
+    outFile.write( varName +','+','.join( [ cat+fluct for cat in categories for fluct in fluctuations ])+'\n')
     outFile.write( '\n'.join( [ PrintValuesCategories( tabular[key], key )for key in tabular] ) )
     outFile.close()
         
@@ -519,6 +522,38 @@ def TreatTemplates( outDirectory, inFiles, var='alpha' ) :
     print( 'writting in : ' + outFileName )
     ListToCSV( outFileName, tabular, var )
 
+#==========================================
+def FillTabularCsvSym( tabular, line ) :
+    line = line.split(',')
+    NPName= line[0]
+    if not NPName in tabular : tabular[NPName]=[]
+    values = tabular[NPName]
+    line = line[1:]
+    index=0
+    for val in line :
+        if index : 
+            if NPName=='EG_SCALE_PS_ETABIN2' : print( 'values : ', values[-1], float(val) )
+            if ( values[-1]*float(val)<0 ) : 
+                values[-1]=(values[-1]-float(val))/2
+                values.append( -values[-1] )
+            else : 
+                values[-1]=(values[-1]+float(val))/2
+                values.append( values[-1] )
+            if NPName=='EG_SCALE_PS_ETABIN2' : print(values[-1] )
+
+        else : values.append( float(val) )
+        index=(index+1)%2
+
+#==========================================
+def SymmetrizeCSV( inFileName ) :
+    tabular = {}
+    inFile = open( inFileName )
+    var=inFile.readline().split(',')[0]
+    [ FillTabularCsvSym( tabular, line ) for line in inFile ]
+    inFile.close()
+
+    outFileName = inFileName.replace('.csv', '_sym.csv' )
+    ListToCSV( outFileName, tabular, var )
 #==========================================
 def parseArgs():
     """
@@ -539,7 +574,7 @@ def parseArgs():
     parser.add_argument( '--prefix', type=str, default='CompareModels' )
     parser.add_argument('directories', type=str, help="", nargs='*' )
     args = parser.parse_args()
-    if args.mode !=4 : args.directories = [ AddSlash(d) for d in args.directories ]
+    if args.mode not in [ 4, 5 ]: args.directories = [ AddSlash(d) for d in args.directories ]
     return args
 
 #========================================
@@ -549,11 +584,12 @@ def main():
     """
     # Parsing the command line arguments
     args = parseArgs()
+
     if args.mode==0 : CompareFit( args.directories, args.prefix )
     elif args.mode==1 : [ CompareFit( [vDir], args.prefix ) for vDir in args.directories ]
     elif args.mode==3 : [ LaunchTemplates( d ) for d in args.directories ] 
     elif args.mode==4 : [ TreatTemplates( args.prefix, args.directories, var ) for var in ['alpha', 'c' ] ]
-
+    elif args.mode==5 : [ SymmetrizeCSV( d ) for d in args.directories ]
 # The program entrance
 if __name__ == '__main__':
     main()

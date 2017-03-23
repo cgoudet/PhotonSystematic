@@ -96,6 +96,41 @@ void DataStore::Divide( const DataStore &dataStore ) {
 }
 
 //=========================
+void DataStore::Normalize() {
+  if ( m_mean==0) m_mean=1;
+  else m_mean/= fabs(m_mean);
+  if ( m_sigma==0) m_sigma=1;
+  else m_sigma/= fabs(m_sigma);
+  if ( m_alphaLow==0) m_alphaLow=1;
+  else m_alphaLow/= fabs(m_alphaLow);
+  if ( m_nLow==0) m_nLow=1;
+  else m_nLow/= fabs(m_nLow);
+  if ( m_alphaHi==0) m_alphaHi=1;
+  else m_alphaHi/= fabs(m_alphaHi);
+  if ( m_nHi==0) m_nHi=1;
+  else m_nHi/= fabs(m_nHi);
+}
+
+//=========================
+void DataStore::Scale( const DataStore &store ) {
+  m_mean*=store.m_mean;
+  m_sigma*=store.m_sigma;
+  m_alphaLow*=store.m_alphaLow;
+  m_nLow*=store.m_nLow;
+  m_alphaHi*=store.m_alphaHi;
+  m_nHi*=store.m_nHi;
+}
+
+//=========================
+void DataStore::Sum( const DataStore &store ) {
+  m_mean+=store.m_mean;
+  m_sigma+=store.m_sigma;
+  m_alphaLow+=store.m_alphaLow;
+  m_nLow+=store.m_nLow;
+  m_alphaHi+=store.m_alphaHi;
+  m_nHi+=store.m_nHi;
+}
+//=========================
 void DataStore::QuadSum( const DataStore &store ) {
 
   list<double> vals { m_mean, store.m_mean };
