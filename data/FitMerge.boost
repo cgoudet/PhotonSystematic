@@ -1,4 +1,4 @@
-fitMethod=fitAll_fitExtPOI_rootFit
+fitMethod=fitAll_fitExtPOI
 analysis=CouplingsBDT
 postMerge=1
 

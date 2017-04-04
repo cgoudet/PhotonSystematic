@@ -66,7 +66,7 @@ using std::to_string;
 using std::remove;
 using namespace ChrisLib;
 
-FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"Couplings33"}, m_fitMethod{"fitAll_fitExtPOI"}, m_debug{0}, m_postMerge(0)
+FitSystematic::FitSystematic() : m_nBins{220} , m_analysis{"CouplingsBDT"}, m_fitMethod{"fitAll_fitExtPOI_rootFit"}, m_debug{0}, m_postMerge(0)
 {
  gErrorIgnoreLevel = 1001;
 }
@@ -422,6 +422,8 @@ void FitSystematic::CreateDataStoreList() {
 	continue;
       }
       m_lDataStore.push_back( DataStore( itMapSet->first, iCat-skippedCategories, itMapSet->second[iCat] ) );
+      cout << "Entry : " << itMapSet->first << " " << iCat  << endl;
+      itMapSet->second[iCat]->Print();
     }
   }
   if ( maxCat!=m_categoriesName.size()-1 ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
@@ -432,14 +434,12 @@ void FitSystematic::CreateDataStoreList() {
       else m_categoriesName[i] = m_categoriesMerging[i].name;
     }
 	  
-	  auto itToRemove = find(m_categoriesName.begin(), m_categoriesName.end(), "toRemove" );
-	while ( itToRemove != m_categoriesName.end() ) {
-	  m_categoriesName.erase( itToRemove );
-	  itToRemove = find(m_categoriesName.begin(), m_categoriesName.end(), "toRemove" );
-	}
-	  
-
-
+  auto itToRemove = find(m_categoriesName.begin(), m_categoriesName.end(), "toRemove" );
+  while ( itToRemove != m_categoriesName.end() ) {
+    m_categoriesName.erase( itToRemove );
+    itToRemove = find(m_categoriesName.begin(), m_categoriesName.end(), "toRemove" );
+  }
+  
 }
 //====================================================================
 void FitSystematic::FitMeanHist( const DataStore &data, map<string,RooRealVar*> &mapVar ) {
@@ -553,6 +553,7 @@ void FitSystematic::FillArray( const DataStore &dataStore, const unsigned fluctL
 
   array["mean"][fluctLine][column] = dataStore.GetMean();
   array["sigma"][fluctLine][column] = dataStore.GetSigma();
+  array["yield"][fluctLine][column] = dataStore.GetYield();
   
  }  
  //====================================================================
@@ -599,9 +600,10 @@ void FitSystematic::PrintResult( list<string> &tablesName ) {
    CombineNames( forInCombine, combined, "" );
    copy( combined.begin(), combined.end(), back_inserter(colsName) );
 
+   list<string> printedVariables{ "mean", "sigma", "yield" };
    for ( auto itVar = tables.begin(); itVar!=tables.end(); ++itVar ) {
      colsName.front() = ExtractVariable( itVar->first );
-     if ( colsName.front() != "mean" && colsName.front()!="sigma" ) continue;
+     if ( find( printedVariables.begin(), printedVariables.end(), colsName.front() ) == printedVariables.end() ) continue;
      string outName = StripString( m_name, 0, 1 ) + "_" + itVar->first +".csv";
      PrintArray( outName, itVar->second, linesName, colsName );
      tablesName.push_back( outName );
@@ -731,7 +733,7 @@ void FitSystematic::DrawDists( const list<string> &tablesName ) {
 void FitSystematic::SaveFitValues() {
 
   fstream stream( m_name + "_values.csv", fstream::out );
-  stream << "NP,cat,mean,sigma,alphaHi,alphaLow,nHi,nLow\n";
+  stream << "NP,cat,mean,sigma,alphaHi,alphaLow,nHi,nLow,yield\n";
 
   for ( auto itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     stream << itData->GetName() 
@@ -742,6 +744,7 @@ void FitSystematic::SaveFitValues() {
 	   << "," << itData->GetAlphaLow()
 	   << "," << itData->GetNHi()
 	   << "," << itData->GetNLow()
+	   << "," << itData->GetYield()
 	   << endl;
   }
 

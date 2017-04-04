@@ -62,6 +62,7 @@ EL::StatusCode FillNtuple::createOutput()
   //  histoStore()->createTH1F("m_yy", 60, 110, 140);
 
   m_containersName.insert( "" );
+  m_datasetWeight = lumiXsecWeight(10.);
 
   TFile *file = wk()->getOutputFile("MxAOD");
   m_outTree = new TTree("output","output");
@@ -77,6 +78,7 @@ EL::StatusCode FillNtuple::createOutput()
 
 EL::StatusCode FillNtuple::execute()
 {
+
   // Here you do everything that needs to be done on every single
   // events, e.g. read input variables, apply cuts, and fill
   // histograms and trees.  This is where most of your actual analysis
@@ -86,16 +88,15 @@ EL::StatusCode FillNtuple::execute()
   // are filled properly.
   HgammaAnalysis::execute();
 
-
   for ( auto &itVar : m_branchLinks ) itVar.second = -99;
-  m_branchLinks["weight"] = lumiXsecWeight(10.) * var::weightCatCoup_Moriond2017();
-  
+
   bool keepEvent=false;
   for (auto sys:getSystematics()) {
     if ( m_containersName.find(sys.name()) == m_containersName.end() ) continue;
     CP_CHECK("execute()",applySystematicVariation(sys));
     keepEvent = FillEntry( sys.name() ) || keepEvent;
   } 
+
   if ( keepEvent ) m_outTree->Fill();
   if ( m_debug==1 ) m_debug=0;
 
@@ -112,7 +113,6 @@ double FillNtuple::ReweightPtGgh( double const initPt ) {
 
 //==============================================================
 void FillNtuple::DefineContainers( const std::string &containerConfig ) {
-
   vector<string> containersName;
     po::options_description desc("LikelihoodProfiel Usage");
     desc.add_options()
@@ -133,7 +133,7 @@ void FillNtuple::DefineContainers( const std::string &containerConfig ) {
       auto it = std::find( m_analysisVariables.begin(), m_analysisVariables.end(), vVar );
       if ( it==m_analysisVariables.end() ) throw runtime_error( "FillNtuple::DefineContainers : " + vVar + "is not a known variable." );
     }
-    
+
     set_difference( m_analysisVariables.begin(), m_analysisVariables.end(), m_commonVarsName.begin(), m_commonVarsName.end(), back_inserter(m_systVarsName) );
 }
 
@@ -173,8 +173,9 @@ bool FillNtuple::FillEntry( const string &systName ) {
   double dummy = var::m_yy();
   if ( dummy > 0 ) {
     vars["m_yy"] = dummy/1e3;
-    vars["weight"]  = var::weight();
-    vars["catCoup"] = var::catCoup_Moriond2017();
+    //vars["weight"]  = var::weight();
+    //    vars["catCoup"] = var::catCoup_Moriond2017();
+    vars["weight"]=var::weightCatCoup_Moriond2017BDT()*m_datasetWeight;
     vars["catCoupBDT"] = var::catCoup_Moriond2017BDT();
   }
 

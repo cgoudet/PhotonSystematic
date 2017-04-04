@@ -298,7 +298,7 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     for d in directories : 
         nDir+=1
         labelDir = StripString(d[:-1], 1, 0 )
-        [ do.AddOption( 'rootFileName',d+labelDir+'_SystVariation_'+('postMerged_' if 'postMerge' in d else '' )+variable+'.csv' ) for i in range(0, 2)];
+        [ do.AddOption( 'rootFileName',AbsPath(d)+labelDir+'_SystVariation_'+('postMerged_' if 'FULLMerge' in d else '' )+variable+'.csv' ) for i in range(0, 2)];
         [ do.AddOption( 'legend', labelDir + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
 
 
@@ -315,7 +315,7 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     do.AddOption( 'latexOpt','0.16 0.91' )
     do.AddOption( 'legendPos','0.5 0.95' )
     do.AddOption( 'doLabels','1' )
-    do.AddOption( 'saveRoot','1' )
+    do.AddOption( 'saveRoot','0' )
     do.AddOption( 'grid','1' )
     do.AddOption( 'forceStyle','0' )
     do.AddOption( 'clean','0' )
@@ -348,7 +348,7 @@ def CompareFit( directories, prefix='CompareModels' ) :
     elif 'catMerge' in directories[0] : prod = 'h015catMerge'
     categories = GetCategories( prod )
 
-    variables = [ 'mean', 'sigma' ]
+    variables = [ 'mean', 'sigma', 'yield' ]
 
     boostFiles = [ SystModelBoost( directories, vCat, vVar, prefix ) for vCat in categories for vVar in variables ]
 
@@ -366,6 +366,13 @@ def GetContainers( directory ) :
     output = [ line.replace('containerName=', '').replace('\n', '') for line in listFile if 'containerName' in line ]
     listFile.close()
     return output
+
+#=================================
+def GetRevertTemplate() : 
+    return [ 'EG_RESOLUTION_PILEUP' 
+             ,'EG_RESOLUTION_SAMPLINGTERM'
+             ]
+    
 #=================================
 def JobOption( directory, NPName, isInclusive=0 ) :
     """
@@ -379,7 +386,13 @@ def JobOption( directory, NPName, isInclusive=0 ) :
     output+= [ ','.join(ntuples) ]*2
 
     isUp = '__1up' in NPName
-    label = NPName.replace('__1up', '').replace('1down', '' ) + '_'
+    label = NPName.replace('__1up', '').replace('__1down', '' )
+
+    isReverted = label in GetRevertTemplate()
+    if isReverted : 
+        isUp = not isUp
+        output[0]+="_inv"
+    else : return []
 
     dataPrefix = NPName+'_' if isUp else '' 
     MCPrefix = NPName+'_' if not isUp else '' 
@@ -392,11 +405,13 @@ def JobOption( directory, NPName, isInclusive=0 ) :
                        ,'MCBranchVarNames=ETA_CALO_1 '+MCPrefix+'catCoupBDT'
                        ,'MCBranchWeightName=weight'
                        ,'thresholdMass=0'
-                       ,'ZMassMin=115'
-                       ,'ZMassMax=135'
+                       ,'ZMassMin=122'
+                       ,'ZMassMax=128'
+                       ,'ZMassNbins=10'
                        ,'sigmaMax=0.02'
                        ,'alphaMin=-0.02'
                        ,'alphaMax=0.02'
+                       ,'nUseEl=10'
                        ]                  
     categoriesLimits = range(1, 35 )
     categoriesLimits.remove(20)
@@ -410,6 +425,7 @@ def JobOption( directory, NPName, isInclusive=0 ) :
     return output
 #=================================
 def LaunchMerged( batchFiles ) :
+    if not batchFiles : print( 'noFiles to merge' ); return 
     mergeName=batchFiles[0].replace('.sh', 'merged.sh')
     MergeBatchFiles( mergeName, batchFiles )
 
@@ -429,9 +445,9 @@ def LaunchTemplates( directory ) :
     NPNames = GetContainers( directory )
     directory = AbsPath( directory )
     jobOptions = [ JobOption( directory, np, isInclusive ) for np in NPNames for isInclusive in range(0,2) ]
-    batchFiles = [ LaunchBatchTemplate( jb ) for jb in jobOptions ]
+    batchFiles = [ LaunchBatchTemplate( jb ) for jb in jobOptions if jb ]
 
-    nJobs=20
+    nJobs=2
     separatedFiles = []
     [ separatedFiles.append([]) for i in range(0, nJobs) ]
     index=0
@@ -459,22 +475,35 @@ def GetResolutionValues( inFile ) :
 
     return outValues
 #=================================
+def ComputeSystematic( val, var, isUp, isInverted, nominalRMS ) :
+    if var == 'alpha' : 
+        if isUp ^ isInverted : return val
+        else : return -val/(1+val)
+    elif var == 'c' :
+        ratio = val*125/nominalRMS
+        if isUp ^ isInverted : return sqrt( 1+ratio*ratio/2)-1
+        else : return sqrt( 1-ratio*ratio/2)-1 
+        
+#=================================
 def TemplateToList( tabular, inFile, var='alpha' ) : 
     """
     Read output of Template method and fill a dictionary
     """
-    print( inFile )
     isInclusive = '_incl' in inFile
     isUp = '__1up' in inFile
+
+    isInversed = '_inv' in inFile
+    if isInversed : isUp = not isUp
+
     label = StripString( inFile )
     label = label[:label.rfind('__')]
     if 'EG_' in label : label = label[label.find('EG_'):]
     elif 'PH_'in label : label = label[label.find('PH_'):]
 
     rootFile = TFile( inFile )
-    hist = rootFile.Get( 'measScale_' + var)
-    hist.GetName()#line used to force cast into TH1
-    nBins = hist.GetNbinsX()
+    matrix = rootFile.Get( 'combin_' + var)
+    print(type(matrix))
+    nBins = matrix.GetNrows()
     resVals = GetResolutionValues( inFile );
 
     if not label in tabular : tabular[label] = [-99]*2
@@ -483,15 +512,10 @@ def TemplateToList( tabular, inFile, var='alpha' ) :
     if size ==2 and nBins!=1  : values+=[-99]*(nBins*2)
 
     for iBin in range( 0, nBins ) :
-        val = hist.GetBinContent(iBin+1) 
+        val = matrix(iBin,iBin)      
         index = (not isInclusive) + iBin
-        if not isUp and var=='alpha': val = -val/(1+val)
-        elif var == 'c' :
-            nomRMS = resVals[index]
-            ratio = val*125/nomRMS
-            if isUp : val = sqrt( 1+ratio*ratio)-1
-            else : val = sqrt( 1-ratio*ratio)-1 
-        values[ index*2 + isUp ] = val
+        val = ComputeSystematic( val, var, isUp, isInversed, resVals[index] )
+        if values[index*2+isUp]==-99 or isInversed : values[ index*2 + isUp ] = val
 
 #=================================
 def PrintValuesCategories( values, NPName ) :
@@ -510,7 +534,9 @@ def ListToCSV( outFileName, tabular, var ) :
 
     fluctuations=[''] if len(categories)==dictSize else ['Down', 'Up' ]
     outFile.write( varName +','+','.join( [ cat+fluct for cat in categories for fluct in fluctuations ])+'\n')
-    outFile.write( '\n'.join( [ PrintValuesCategories( tabular[key], key )for key in tabular] ) )
+    keys=tabular.keys()
+    keys.sort()
+    outFile.write( '\n'.join( [ PrintValuesCategories( tabular[key], key )for key in keys] ) )
     outFile.close()
         
 #=================================
@@ -521,7 +547,8 @@ def TreatTemplates( outDirectory, inFiles, var='alpha' ) :
     tabular = {}
     [ TemplateToList( tabular, f, var ) for f in inFiles ]
     varName = 'mean' if var=='alpha' else 'sigma'
-    outFileName = AddSlash(outDirectory) + StripString( outDirectory[:-1], 1, 0 ) + '_'+varName+'.csv'
+    outDirectory=AddSlash( outDirectory )
+    outFileName = outDirectory + StripString( outDirectory[:-1], 1, 0 ) + '_SystVariation_'+varName+'.csv'
     print( 'writting in : ' + outFileName )
     ListToCSV( outFileName, tabular, var )
 

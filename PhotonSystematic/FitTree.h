@@ -113,7 +113,7 @@ inline const std::list<std::string> &GetAllowedFitMethods() {
 }
 
 inline const std::list<std::string> &GetVariables() {
-  static const std::list<std::string> variables = { "mean", "sigma", "alphaHi", "alphaLow", "nHi", "nLow" }; 
+  static const std::list<std::string> variables = { "mean", "sigma", "alphaHi", "alphaLow", "nHi", "nLow", "yield" }; 
   return variables;
 }
 

@@ -33,8 +33,9 @@ class DataStore {
   double GetNHi() const { return m_nHi; }
   double GetNLow() const { return m_nLow; }
   double GetSigma() const { return m_sigma; }
+  double GetYield() const { return m_yield; }
 
-  void SetDataset( RooAbsData* dataset ) { m_dataset = dataset; }
+  void SetDataset( RooAbsData* dataset ) { m_dataset = dataset; m_yield=m_dataset->sumEntries(); }
   void SetName( const std::string &name ) { m_name = name; }
   static double DSCB( double *x, double *p );
   /**\brief Determine which variables should stay constant for a given fit.
@@ -55,7 +56,7 @@ class DataStore {
   double m_alphaHi;
   double m_nLow;
   double m_nHi;
-
+  double m_yield;
 };
 
 #endif

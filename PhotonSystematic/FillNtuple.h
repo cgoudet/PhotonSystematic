@@ -25,6 +25,7 @@ private:
   //outputs
   TTree *m_outTree; //!
   int m_debug; //!
+  double m_datasetWeight;//!
 
   std::set<std::string> m_containersName;//!
   std::vector<std::string> m_commonVarsName;//!
@@ -37,8 +38,8 @@ private:
   bool FillEntry( const std::string &systName );//!
   void FillLink( const std::string &inName, const std::string &outName, const std::map<std::string,double> &vars ); //!
 
-  const std::list<std::string> m_analysisVariables { "catCoup", "m_yy", "weight", "catCoupBDT"  }; //!
-  const std::list<std::string> m_processes { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
+  const std::list<std::string> m_analysisVariables { "m_yy", "weight", "catCoupBDT"  }; //!
+  //  const std::list<std::string> m_processes { "ggH", "VBF", "WH", "ZH", "ttH", "bbH125_yb2", "bbH125_ybyt", "tWH", "tHjb" };
   //  static const std::list<std::string> vect = { "DPhi_yy","catCoup","catXS","catXSPhi","m_yy", "pt_yy","weight","weightXS"};
 
 public:

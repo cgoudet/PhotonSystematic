@@ -21,7 +21,9 @@ using std::bitset;
 
 DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_hist(0), m_category(category),m_name(name)
 								       ,m_mean(125), m_sigma(2), m_alphaLow(1), m_alphaHi(1), m_nLow(5), m_nHi(5) 
-{}
+{
+  if ( m_dataset ) m_yield = m_dataset->sumEntries();
+}
 //=========================
 
 void DataStore::Fit( RooAbsPdf *pdf ) {
@@ -70,6 +72,7 @@ void DataStore::Print() {
   cout << "nHi : " << m_nHi << endl;
   cout << "alphaLow : " << m_alphaLow << endl;
   cout << "nLow : " << m_nLow << endl;
+  cout << "yield : " << m_yield << endl;
 }
 
 //=========================
@@ -93,6 +96,9 @@ void DataStore::Divide( const DataStore &dataStore ) {
   if ( dataStore.m_nLow != 0 ) m_nLow = ( m_nLow - dataStore.m_nLow)/dataStore.m_nLow;
   else m_nLow = 1;
 
+  if ( dataStore.m_yield != 0 ) m_yield = ( m_yield - dataStore.m_yield)/dataStore.m_yield;
+  else m_yield = 1;
+
 }
 
 //=========================
@@ -109,6 +115,8 @@ void DataStore::Normalize() {
   else m_alphaHi/= fabs(m_alphaHi);
   if ( m_nHi==0) m_nHi=1;
   else m_nHi/= fabs(m_nHi);
+  if ( m_yield==0) m_yield=1;
+  else m_yield/= fabs(m_yield);
 }
 
 //=========================
@@ -119,6 +127,7 @@ void DataStore::Scale( const DataStore &store ) {
   m_nLow*=store.m_nLow;
   m_alphaHi*=store.m_alphaHi;
   m_nHi*=store.m_nHi;
+  m_yield*=store.m_yield;
 }
 
 //=========================
@@ -129,6 +138,7 @@ void DataStore::Sum( const DataStore &store ) {
   m_nLow+=store.m_nLow;
   m_alphaHi+=store.m_alphaHi;
   m_nHi+=store.m_nHi;
+  m_yield+=store.m_yield;
 }
 //=========================
 void DataStore::QuadSum( const DataStore &store ) {
@@ -151,6 +161,9 @@ void DataStore::QuadSum( const DataStore &store ) {
 
   vals = { m_nLow, store.m_nLow };
   m_nLow = Oplus( vals );
+
+  vals = { m_yield, store.m_yield };
+  m_yield = Oplus( vals );
 
 }
 //=================================
@@ -185,7 +198,7 @@ void DataStore::FitRootDSCB( const std::bitset<6> &constness ) {
   while( status!=4000 && nFits );
   //( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow ) {
   FillDSCB( dscb->GetParameter(1), dscb->GetParameter(2), dscb->GetParameter(4), dscb->GetParameter(3), dscb->GetParameter(6), dscb->GetParameter(5) );
-
+  m_yield = dscb->Integral(105,160)*0.1;
   }
 //==========================
 Double_t DataStore::DSCB( Double_t *x, Double_t *p ) {
