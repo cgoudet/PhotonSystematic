@@ -210,7 +210,6 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
   if ( m_debug ) cout << "FitSystematic::FillEntryDataset\n";
 
   bool isCatVarCommon = find( m_commonVars.begin(), m_commonVars.end(), catVar ) != m_commonVars.end();
-
   RooRealVar *weightVar = observables["weight"];
   if ( !weightVar ) throw runtime_error( "FillEntryDataset : No weight variable provided" );
 
@@ -224,7 +223,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
     if ( itNPName->find("PH_EFF") != string::npos || itNPName->find("PH_Iso")!=string::npos ) continue;
     //    if ( itNPName->find("EG_SCALE_MAT") == string::npos ) continue;
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
-    string catBranchName { ( isCatVarCommon ? branchPrefix : "" ) +catVar };
+    string catBranchName { ( isCatVarCommon ? "" : branchPrefix ) +catVar };
     int category = static_cast<int>(m_mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
     tuple<double,double,int> currentEvent { 0, 0, MergedCategory(category) };
@@ -272,7 +271,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
       }
 
       (*vectDataset)[i]->add( setObservables, weightVar->getVal() );
-      if ( m_fitMethod.find("unbinned")==string::npos && string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000)
+      if ( m_fitMethod.find("unbinned")==string::npos && string((*vectDataset)[i]->ClassName()) == "RooDataSet" && (*vectDataset)[i]->numEntries()==1000000)
 	(*vectDataset)[i] = CreateDataHist( (*vectDataset)[i] );
 
     }
@@ -361,7 +360,7 @@ void FitSystematic::Run( const vector<string> &rootFilesName ) {
   gErrorIgnoreLevel=kError;
   FillDataset( rootFilesName );
   CreateDataStoreList();
-
+  exit(0);
   FitDatasets();
 
   //Create a directory at the target to hold all results.
@@ -421,8 +420,6 @@ void FitSystematic::CreateDataStoreList() {
 	continue;
       }
       m_lDataStore.push_back( DataStore( itMapSet->first, iCat-skippedCategories, itMapSet->second[iCat] ) );
-      cout << "Entry : " << itMapSet->first << " " << iCat  << endl;
-      itMapSet->second[iCat]->Print();
     }
   }
   if ( maxCat!=m_categoriesName.size()-1 ) throw runtime_error( "FitSystematic::FillEntryDataset : category number exceed what is expected " + to_string(maxCat) + "/" + to_string(m_categoriesName.size()));
