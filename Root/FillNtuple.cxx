@@ -135,6 +135,7 @@ void FillNtuple::DefineContainers( const std::string &containerConfig ) {
     }
 
     set_difference( m_analysisVariables.begin(), m_analysisVariables.end(), m_commonVarsName.begin(), m_commonVarsName.end(), back_inserter(m_systVarsName) );
+
 }
 
 //==============================================================

@@ -130,6 +130,7 @@ void FitSystematic::Configure( const string &confFile ) {
   sort( m_catOnly.begin(), m_catOnly.end() );
 
   for ( auto &s : catMergeInput ) FillCategoryMerging(s);
+
 }
 
 //===
@@ -174,7 +175,6 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     CombineNames( inCombine, branchesToLink );
   }
 
-
   for ( auto &vFileName : rootFilesName ) {
     cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
@@ -183,18 +183,17 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     TTree *inTree = static_cast<TTree*>( inFile->Get(FindDefaultTree( inFile, "TTree", "output" ).c_str() ));
 
     m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
-
     if ( branchesToLink.empty() ) {//Optimize the branches to effectively link to gain reading time
       SelectAnalysisBranches( branchesToLink );
       m_mapBranch.ClearMaps();
       m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
-      GetCommonVars( m_commonVars );
     }
+
+    if ( m_commonVars.empty() ) GetCommonVars( m_commonVars );
 
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
-      //      if ( iEntry % 30 ) continue;
       FillEntryDataset( mapCBParameters, catVar );
     }//end iEntry
 

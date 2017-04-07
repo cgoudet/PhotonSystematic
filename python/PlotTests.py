@@ -343,7 +343,7 @@ def CompareFit( directories, prefix='CompareModels' ) :
     """
     if not directories : return
 
-    prod = 'h015'
+    prod = 'h015catMerge'
     if 'h014' in directories[0] : prod = 'h014'
     elif 'catMerge' in directories[0] : prod = 'h015catMerge'
     categories = GetCategories( prod )

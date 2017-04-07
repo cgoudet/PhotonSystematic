@@ -198,7 +198,7 @@ void DataStore::FitRootDSCB( const std::bitset<6> &constness ) {
   while( status!=4000 && nFits );
   //( double mean, double sigma, double alphaHi, double alphaLow, double nHi, double nLow ) {
   FillDSCB( dscb->GetParameter(1), dscb->GetParameter(2), dscb->GetParameter(4), dscb->GetParameter(3), dscb->GetParameter(6), dscb->GetParameter(5) );
-  m_yield = dscb->Integral(105,160)*0.1;
+  m_yield = dscb->Integral(105,160)/0.1;
   }
 //==========================
 Double_t DataStore::DSCB( Double_t *x, Double_t *p ) {
