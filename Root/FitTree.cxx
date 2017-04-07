@@ -221,7 +221,6 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
    */
   for ( list<string>::const_iterator itNPName = m_NPName.begin(); itNPName!=m_NPName.end(); ++itNPName ) {
     if ( itNPName->find("PH_EFF") != string::npos || itNPName->find("PH_Iso")!=string::npos ) continue;
-    //    if ( itNPName->find("EG_SCALE_MAT") == string::npos ) continue;
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
     string catBranchName { ( isCatVarCommon ? "" : branchPrefix ) +catVar };
     int category = static_cast<int>(m_mapBranch.GetDouble( catBranchName ) );
@@ -251,7 +250,6 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
 
   for ( auto itChannels : eventsPerChannel ) {
     int category = std::get<2>(itChannels.second);
-
     string name = itChannels.first;
     double mass = std::get<0>( itChannels.second );
     map<string,list<double>>::iterator itList = masses.find( name );
@@ -474,7 +472,6 @@ void FitSystematic::FixParametersMethod ( unsigned int category, const vector<Da
 }
 //======================================================
 void FitSystematic::FillFluctFit( const vector<DataStore*> &nominalFit, RooAbsPdf *pdf, map<string,RooRealVar*> &mapVar ) {
-  cout << "fluctuation" << endl;
   for ( list<DataStore>::iterator itData = m_lDataStore.begin(); itData!=m_lDataStore.end(); ++itData ) {
     if ( itData->GetName() == "" ) continue;
     //    itData->SetDataset( CreateDataHist( itData->GetDataset() ) );

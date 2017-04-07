@@ -22,11 +22,7 @@ using std::bitset;
 DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_dataset(dataset), m_hist(0), m_category(category),m_name(name)
 								       ,m_mean(125), m_sigma(2), m_alphaLow(1), m_alphaHi(1), m_nLow(5), m_nHi(5) 
 {
-  if ( m_dataset ) {
-    m_yield = m_dataset->sumEntries();
-    m_dataset->Print();
-    cout << m_dataset->numEntries() << endl;
-  }
+  if ( m_dataset ) m_yield = m_dataset->sumEntries();
 }
 //=========================
 
