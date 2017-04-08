@@ -358,7 +358,6 @@ void FitSystematic::Run( const vector<string> &rootFilesName ) {
   gErrorIgnoreLevel=kError;
   FillDataset( rootFilesName );
   CreateDataStoreList();
-  exit(0);
   FitDatasets();
 
   //Create a directory at the target to hold all results.
