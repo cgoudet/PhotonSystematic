@@ -258,6 +258,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
     observables["m_yy"]->setVal( mass );
     weightVar->setVal( std::get<1>( itChannels.second ) );
 
+    //    cout << mass << " " << weightVar->getVal() << endl;
     ExtendMapVect( m_datasets, name, category );
     vector<RooAbsData*> *vectDataset = &m_datasets[name];
     if ( !category ) throw runtime_error( "FitTree::FillEntryDataset : category 0 reserved for inclusive.");

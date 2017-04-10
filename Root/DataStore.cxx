@@ -23,6 +23,8 @@ DataStore::DataStore( string name, int category, RooAbsData* dataset ) : m_datas
 								       ,m_mean(125), m_sigma(2), m_alphaLow(1), m_alphaHi(1), m_nLow(5), m_nHi(5) 
 {
   if ( m_dataset ) m_yield = m_dataset->sumEntries();
+
+  if ( m_dataset && m_category==0 && m_name =="" ) m_dataset->Print();
 }
 //=========================
 

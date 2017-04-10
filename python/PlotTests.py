@@ -569,7 +569,6 @@ def FillTabularCsvSym( tabular, line ) :
             else : 
                 values[-1]=(values[-1]+float(val))/2
                 values.append( values[-1] )
-            if NPName=='EG_SCALE_PS_ETABIN2' : print(values[-1] )
 
         else : values.append( float(val) )
         index=(index+1)%2
