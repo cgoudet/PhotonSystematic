@@ -298,7 +298,7 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     for d in directories : 
         nDir+=1
         labelDir = StripString(d[:-1], 1, 0 )
-        [ do.AddOption( 'rootFileName',AbsPath(d)+labelDir+'_SystVariation_'+('postMerged_' if 'FULLMerge' in d else '' )+variable+'.csv' ) for i in range(0, 2)];
+        [ do.AddOption( 'rootFileName',AbsPath(d)+labelDir+'_SystVariation_'+('postMerged_' if 'Merge' in d else '' )+variable+'.csv' ) for i in range(0, 2)];
         [ do.AddOption( 'legend', labelDir + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
 
 
