@@ -5,6 +5,14 @@ sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/PlotFunctio
 sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/Template/python"))
 from SideFunction import *
 from Functions_MeasureAlphaSigma import *
+
+def GetContainerFile( fileName ):
+    containerFile = 'listContainer'
+    if 'PhotonAllSys1' in fileName : containerFile+='1'
+    elif 'PhotonAllSys2' in fileName : containerFile+='2'
+    containerFile+='.txt'
+    return containerFile
+
 #=================================
 def UpdateRecord( directory, fileName ) :
     recordName  = directory+'FillRecord.txt'
@@ -21,8 +29,10 @@ def UpdateRecord( directory, fileName ) :
 #=================================
 def LaunchFile( directory, fileName ) :
     if UpdateRecord( directory, fileName ) : return
+
+
     options = {}
-    options['containerConfig:'] = directory+'listContainers.txt'
+    options['containerConfig:'] = directory+GetContainerFile(fileName)
     options['OutputDir:'] = 'FillNtuple_' + StripString(fileName)
     options[''] = '/sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/FillNtuple.cfg ' + directory + 'MxAOD/' + fileName
     if 'FULL' in directory : options['PhotonHandler.Calibration.decorrelationModel:'] = 'FULL_v1'
@@ -43,7 +53,7 @@ def BatchFile( directory, inFile ) :
     batch.write( 'runFillNtuple  /sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/FillNtuple.cfg '
                  + directory+'MxAOD/'+inFile+' '
                  +' PhotonHandler.Calibration.decorrelationModel: ' + ('FULL_v1' if 'FULL' in directory else '1NP_v1') 
-                 + ' OutputDir: FillNtuple_' + inFile+' containerConfig: ' + directory + 'listContainers.txt\n' )
+                 + ' OutputDir: FillNtuple_' + inFile+' containerConfig: ' + directory + GetContainerFile() + '\n' )
     batch.write('cp -r FillNtuple* /sps/atlas/c/cgoudet/Hgam/FrameWork/.\n' )
     batch.close()
     commandLine = '~/sub28.sh '+ inFile + ' ' + inFile + '.log ' + inFile + '.err ' + batchFile

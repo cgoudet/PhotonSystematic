@@ -23,3 +23,20 @@ The datasets which must be downloaded are :
 - Call PhotonSystematic/python/FindBranches.py <path_to version directory>. 
 This will generate the listContainers.txt files with all the branches in the current file.
 The branches should be harmonized between all input files
+If the dataset is splitted in parts with distinct NP, create a list container1(2,3, ...).txt for each subset.
+
+
+### Create ntuple from MxAOD
+- Call python PhotonSystematic/python/FillNtuple.py --directory <path_to-version_directory> --mode 1
+mode 1 launch independently each dataset on the batch, mode 0 launch successively all the datasets locally.
+
+In each directory, a file FillRecord.txt saves the name of the file already launched. 
+If one wants to relauch a file, it must be removed from this text file.
+
+As of 20170614, FillNtuple recognises if the set of NP is splitted.
+If the filename contains PhotonAllSysI, listContainersI.txt is used.
+
+For each version, one has to check that the right branch is used for weight and caetgorisation.
+This can be changed in PhotonSystematic/Root/FillNtuple.cxx/FillEtry(L.180).
+
+Finished files will appear in the directory from which the routine is launched.
