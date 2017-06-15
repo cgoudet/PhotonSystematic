@@ -53,12 +53,13 @@ def BatchFile( directory, inFile ) :
     batch.write( 'runFillNtuple  /sps/atlas/c/cgoudet/Hgam/FrameWork/PhotonSystematic/data/FillNtuple.cfg '
                  + directory+'MxAOD/'+inFile+' '
                  +' PhotonHandler.Calibration.decorrelationModel: ' + ('FULL_v1' if 'FULL' in directory else '1NP_v1') 
-                 + ' OutputDir: FillNtuple_' + inFile+' containerConfig: ' + directory + GetContainerFile() + '\n' )
-    batch.write('cp -r FillNtuple* /sps/atlas/c/cgoudet/Hgam/FrameWork/.\n' )
+                 + ' OutputDir: FillNtuple_' + inFile+' containerConfig: ' + directory + GetContainerFile(inFile) + '\n' )
+
+    batch.write('cp -r FillNtuple* ' + os.getcwd() + '/.\n' )
     batch.close()
     commandLine = '~/sub28.sh '+ inFile + ' ' + inFile + '.log ' + inFile + '.err ' + batchFile
 #    print( commandLine )
-    os.system( commandLine )
+#    os.system( commandLine )
 #=================================
 def LaunchFillNtuple( directory, mode ) :
     files = [ StripString( f, 1, 0 ) for f in listFiles( directory+'MxAOD/', '*.root' ) ]
