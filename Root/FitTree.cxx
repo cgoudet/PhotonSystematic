@@ -212,8 +212,9 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
       m_mapBranch.LinkTreeBranches( inTree, 0, branchesToLink  );
     }
 
-    if ( m_commonVars.empty() ) GetCommonVars( m_commonVars );
+    if ( m_mapBranch.GetSize()<=3 ) throw runtime_error( "FitTree::FillDataset : not enough branches linked (" + to_string(m_mapBranch.GetSize()) +")" );
 
+    if ( m_commonVars.empty() ) GetCommonVars( m_commonVars );
     unsigned int nentries = inTree->GetEntries();
     for ( unsigned int iEntry=0; iEntry<nentries; ++iEntry ) {
       inTree->GetEntry( iEntry );
@@ -320,7 +321,7 @@ double FitSystematic::ComputeTotalSystMass( list<double> &masses ) {
 //===
 
 void FitSystematic::SelectAnalysisBranches( list<string> &branchesOfInterest ) {
-  if ( m_debug ) cout << "SelectAnalysisBranches" << endl;
+  if ( m_debug ) cout << "FitTree::SelectAnalysisBranches" << endl;
   list<string> keys;
   m_mapBranch.GetKeys( keys );
 
@@ -330,6 +331,7 @@ void FitSystematic::SelectAnalysisBranches( list<string> &branchesOfInterest ) {
   SelectVariablesAnalysis( inCombine.back() );
 
   CombineNames( inCombine, branchesOfInterest );
+  if ( m_debug ) cout << "FitTree::SelectAnalysisBranches done" << endl;
 }
 //===
 void FitSystematic::GetSystematics( const list<string> &branches, list<string> &systs ) {
