@@ -46,7 +46,7 @@ Finished files will appear in the directory from which the routine is launched.
 - You can remove the FillNtuple directories in the current directory afterward
 
 ### Run the fitting procedure
-- Call TestSyst <rootFile> --inConfFiles <configurationFile> --mode 1 --outFileName <outDirectory>
+- Call TestSyst <rootFile> --inConfFile <configurationFile> --mode 1 --outFileName <outDirectory>
 
 The directory <outDirectory> is created if it doesn't exist. All the output files will be printed in this directory.
 
