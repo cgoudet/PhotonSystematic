@@ -34,7 +34,33 @@ class FitSystematic {
   FitSystematic( const std::string &name, const std::string &confFile );
 
   static double DSCB( double *x, double *p );
+/**\brief Include the user inputs to the class.
 
+The configuration file must be in boost format.
+
+Options :
+- nBins : In case of binned likelihood fit, decide how many bins are defined.
+- analysis : Implicitely defined the branch which is used for categorisation, event weights and the categories Names.
+The content of each analysis is defined in FitSystematic::m_analysis.
+- fitMethod : Defines implicitely the fit parameters of the analysis.
+The content of each option is detailed in FitSystematic::m_fitMethod. 
+- catOnly : Limits the fit to the selected categories. The absence of this options implies all categories.
+- NPName : Limits the fit to the selected nuisance parameters. The absence of this options implies all categories.
+If NPName is provided, these NP will be looked for in all TTree. 
+No protection against a TTree missing this variable is set.
+If not provided, all NP from a file will be read. 
+If files contains different sets of NP, only the datasets related to those NP will be filled.
+- mergeNP= <string1> <string2> : Add the impact of <string1> to the effect of <string2>. 
+If <string2> does not exist, it is created.
+- postMerge : Decide wether the merging of the nuisance parameter is performed before or after the fit procedure.
+If 0, the combined quadratic impact of all nuisance parameters is computed on each event.
+The combined NP effect is measured along the other NP.
+If 1, each NP effect is evaluated independently and the combined NP is the quadratic sum of each NP.
+- categoryMerging : Merge events from various categories into a single category.
+Input treated in FitSystematic::FillCategoryMerging.
+
+
+ */
   void Configure( const std::string &confFile );
   void FillDataset( const std::vector<std::string> &rootFilesName );
   void FillEntryDataset( std::map<std::string,RooRealVar*> &observables,

@@ -85,29 +85,6 @@ FitSystematic::FitSystematic( const string &name, const string &confFile ) : Fit
   Configure( confFile );
 }
 
-/**\brief Include the user inputs to the class.
-
-The configuration file must be in boost format.
-
-Options :
-- nBins : In case of binned likelihood fit, decide how many bins are defined.
-- analysis : Implicitely defined the branch which is used for categorisation, event weights and the categories Names.
-The content of each analysis is defined in FitSystematic::m_analysis.
-- fitMethod : Defines implicitely the fit parameters of the analysis.
-The content of each option is detailed in FitSystematic::m_fitMethod. 
-- catOnly : Limits the fit to the selected categories. The absence of this options implies all categories.
-- NPName : Limits the fit to the selected nuisance parameters. The absence of this options implies all categories.
-- mergeNP= <string1> <string2> : Add the impact of <string1> to the effect of <string2>. 
-If <string2> does not exist, it is created.
-- postMerge : Decide wether the merging of the nuisance parameter is performed before or after the fit procedure.
-If 0, the combined quadratic impact of all nuisance parameters is computed on each event.
-The combined NP effect is measured along the other NP.
-If 1, each NP effect is evaluated independently and the combined NP is the quadratic sum of each NP.
-- categoryMerging : Merge events from various categories into a single category.
-Input treated in FitSystematic::FillCategoryMerging.
-
-
- */
 void FitSystematic::Configure( const string &confFile ) {
   vector<string> vectNPName, systOnly, inMergeNP, catMergeInput;
   po::options_description configOptions("configOptions");
@@ -189,15 +166,17 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     }
   }
 
+
   list<string> branchesToLink;
-  if ( !m_NPName.empty() ) {
+  bool reInitNP = m_NPName.empty();
+  if ( !reInitNP) {
     list<list<string>> inCombine( 2, list<string>());
     if ( find( m_NPName.begin(), m_NPName.end(), "" ) == m_NPName.end() ) m_NPName.insert(m_NPName.begin(), "" );
     inCombine.front() = m_NPName;
     SelectVariablesAnalysis( inCombine.back() );
     CombineNames( inCombine, branchesToLink );
   }
-
+    
   for ( auto &vFileName : rootFilesName ) {
     cout << vFileName << endl;
     TFile *inFile =  new TFile( vFileName.c_str() );
@@ -224,6 +203,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     delete inTree;    
     inFile->Close( "R" );
     delete inFile;
+    if ( reInitNP ) branchesToLink.clear();
   }//end vFileName
 
 }
@@ -319,7 +299,6 @@ double FitSystematic::ComputeTotalSystMass( list<double> &masses ) {
   throw invalid_argument( "ComputeTotalSystMass : wrong list size " + std::to_string(size) );
 }
 //===
-
 void FitSystematic::SelectAnalysisBranches( list<string> &branchesOfInterest ) {
   if ( m_debug ) cout << "FitTree::SelectAnalysisBranches" << endl;
   list<string> keys;
