@@ -40,3 +40,14 @@ For each version, one has to check that the right branch is used for weight and 
 This can be changed in PhotonSystematic/Root/FillNtuple.cxx/FillEtry(L.180).
 
 Finished files will appear in the directory from which the routine is launched.
+
+### Copy ntuple to directory
+- Call python PhotonSystematic/python/FillNtuple.py --mode 2
+- You can remove the FillNtuple directories in the current directory afterward
+
+### Run the fitting procedure
+- Call TestSyst <rootFile> --inConfFiles <configurationFile> --mode 1 --outFileName <outDirectory>
+
+The directory <outDirectory> is created if it doesn't exist. All the output files will be printed in this directory.
+
+Configuration file must be in boost format. The available options are in FitSystematic::Configure

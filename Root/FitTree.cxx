@@ -85,6 +85,29 @@ FitSystematic::FitSystematic( const string &name, const string &confFile ) : Fit
   Configure( confFile );
 }
 
+/**\brief Include the user inputs to the class.
+
+The configuration file must be in boost format.
+
+Options :
+- nBins : In case of binned likelihood fit, decide how many bins are defined.
+- analysis : Implicitely defined the branch which is used for categorisation, event weights and the categories Names.
+The content of each analysis is defined in FitSystematic::m_analysis.
+- fitMethod : Defines implicitely the fit parameters of the analysis.
+The content of each option is detailed in FitSystematic::m_fitMethod. 
+- catOnly : Limits the fit to the selected categories. The absence of this options implies all categories.
+- NPName : Limits the fit to the selected nuisance parameters. The absence of this options implies all categories.
+- mergeNP= <string1> <string2> : Add the impact of <string1> to the effect of <string2>. 
+If <string2> does not exist, it is created.
+- postMerge : Decide wether the merging of the nuisance parameter is performed before or after the fit procedure.
+If 0, the combined quadratic impact of all nuisance parameters is computed on each event.
+The combined NP effect is measured along the other NP.
+If 1, each NP effect is evaluated independently and the combined NP is the quadratic sum of each NP.
+- categoryMerging : Merge events from various categories into a single category.
+Input treated in FitSystematic::FillCategoryMerging.
+
+
+ */
 void FitSystematic::Configure( const string &confFile ) {
   vector<string> vectNPName, systOnly, inMergeNP, catMergeInput;
   po::options_description configOptions("configOptions");
@@ -896,6 +919,18 @@ int FitSystematic::MergedCategory( int initialCategory ) {
 }
 
 //==========================================
+/**\brief Treat the catMerge keyword from the input file
+
+Two fillings are possible : 
+- <int> : Number of the category in which the other will be merged. 
+The name of the merged category will be the name of this category.
+
+- <string> <int> : Number of the category in which the others will be merged.
+The name of the merged category will be changed to <string>
+
+- <int1> <int2> : Merge the category <int1> into the category <int2>.
+
+ */
 void FitSystematic::FillCategoryMerging( const std::string &inputLine ) {
   vector<string> parserString;
   ParseVector( inputLine, parserString );
