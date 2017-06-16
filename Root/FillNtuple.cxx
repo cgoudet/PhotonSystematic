@@ -113,6 +113,7 @@ double FillNtuple::ReweightPtGgh( double const initPt ) {
 
 //==============================================================
 void FillNtuple::DefineContainers( const std::string &containerConfig ) {
+
   vector<string> containersName;
     po::options_description desc("LikelihoodProfiel Usage");
     desc.add_options()
@@ -123,10 +124,12 @@ void FillNtuple::DefineContainers( const std::string &containerConfig ) {
     // create a map vm that contains options and all arguments of options       
     po::variables_map vm;
     std::ifstream ifs( containerConfig, std::ifstream::in );
+    if ( !ifs.is_open() ) throw runtime_error( "options_description : " + containerConfig + " does not exist." );
     po::store(po::parse_config_file(ifs, desc), vm);
     po::notify(vm);
 
     for ( auto itName : containersName ) m_containersName.insert(itName);
+    if ( m_containersName.empty() ) throw runtime_error( "FillNtuple::DefineContainers : No containers provided" );
 
     sort( m_commonVarsName.begin(), m_commonVarsName.end() );
     for ( auto vVar : m_commonVarsName ) {
@@ -140,7 +143,6 @@ void FillNtuple::DefineContainers( const std::string &containerConfig ) {
 
 //==============================================================
 void FillNtuple::LinkOutputTree() {
-
   list<list<string>> inCombineNames( 2, list<string>() );
   copy( m_containersName.begin(), m_containersName.end(), back_inserter( *inCombineNames.begin() ) );
   copy( m_systVarsName.begin(), m_systVarsName.end(), back_inserter( inCombineNames.back() ) );
@@ -149,9 +151,8 @@ void FillNtuple::LinkOutputTree() {
   CombineNames( inCombineNames, outBranchesName );
   outBranchesName.insert( outBranchesName.end(), m_commonVarsName.begin(), m_commonVarsName.end() );
 
-  for ( auto it = outBranchesName.begin(); it!=outBranchesName.end(); ++it ) 
+  for ( auto it = outBranchesName.begin(); it!=outBranchesName.end(); ++it )
     m_outTree->Branch( it->c_str(), &m_branchLinks[*it] );
-
 
 }
 

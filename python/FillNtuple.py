@@ -7,7 +7,7 @@ from SideFunction import *
 from Functions_MeasureAlphaSigma import *
 
 def GetContainerFile( fileName ):
-    containerFile = 'listContainer'
+    containerFile = 'listContainers'
     if 'PhotonAllSys1' in fileName : containerFile+='1'
     elif 'PhotonAllSys2' in fileName : containerFile+='2'
     containerFile+='.txt'
