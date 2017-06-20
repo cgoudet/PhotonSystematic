@@ -79,6 +79,7 @@ EL::StatusCode FillNtuple::createOutput()
 EL::StatusCode FillNtuple::execute()
 {
 
+  try {
   // Here you do everything that needs to be done on every single
   // events, e.g. read input variables, apply cuts, and fill
   // histograms and trees.  This is where most of your actual analysis
@@ -99,7 +100,10 @@ EL::StatusCode FillNtuple::execute()
 
   if ( keepEvent ) m_outTree->Fill();
   if ( m_debug==1 ) m_debug=0;
-
+  }
+  catch ( SG::ExcBadAuxVar e ) {
+    cout << "Throwing ExcBadAuxVar" << endl;
+  }
   return EL::StatusCode::SUCCESS;
 }
 

@@ -16,7 +16,8 @@ The datasets which must be downloaded are :
 - mc15c.aMCnloPy8_bbH125_yb2
 - mc15c.aMCnloPy8_bbH125_ybyt
 - mc15c.aMCnloPy8_ttH125
-
+Each file is usually about 4GB heavy. 
+The full PhotonAllSys h015d production weights 415GB.
 
 ### Extract the name of all the EGamma NP in the model.
 - Open a MxAOD in root (do not do any rcSetup in the session) and CollectionTree->Print(); > ../<version>_<EGamModel>.txt
@@ -41,6 +42,11 @@ This can be changed in PhotonSystematic/Root/FillNtuple.cxx/FillEtry(L.180).
 
 Finished files will appear in the directory from which the routine is launched.
 
+A typical files contains 100k events.
+This steps is usually run at 15Hz interactively (--mode 0) for a running time of about two hours.
+On the batch, the code usually runs at lower rate (5-10Hz) and lasts for 3 to four hours.
+Given the large number of files, it is usually run of the batch (--mode 1).
+
 ### Copy ntuple to directory
 - Call python PhotonSystematic/python/FillNtuple.py --mode 2
 - You can remove the FillNtuple directories in the current directory afterward
@@ -51,3 +57,8 @@ Finished files will appear in the directory from which the routine is launched.
 The directory <outDirectory> is created if it doesn't exist. All the output files will be printed in this directory.
 
 Configuration file must be in boost format. The available options are in FitSystematic::Configure
+
+For h015d production, the total fitting time is estimated at 25min : 20mins to read ntuples and fill datasets, 5min for the fits.
+
+### Create the plots
+- 
