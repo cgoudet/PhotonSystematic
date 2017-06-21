@@ -2,7 +2,8 @@
 
 postMerge=1
 
-categoryMerging= VHMET_HIGH  19
+#analysis=CouplingsBDTh015
+categoryMerging= VHMET_High  19
 categoryMerging= 20 19
 
 categoryMerging= VHdilep 23 

@@ -58,7 +58,12 @@ The directory <outDirectory> is created if it doesn't exist. All the output file
 
 Configuration file must be in boost format. The available options are in FitSystematic::Configure
 
-For h015d production, the total fitting time is estimated at 25min : 20mins to read ntuples and fill datasets, 5min for the fits.
+For h015d production, the total fitting time is estimated at 35min : 30mins to read ntuples and fill datasets, 5min for the fits.
 
 ### Create the plots
-- 
+- python PhotonSystematic/python/PlotTests.py <resultFile>
+
+By default, plots for the full set of systematics are created.
+If the name of the directory contains 'Merge', the postmerge results will be used.
+Carefull, the TestSyst program use the directory name as prefix for all the files and this convention is used by PlotTest.
+If one wants just to rename a directory, mass renaming all the files inside is also necessary.

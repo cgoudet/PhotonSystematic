@@ -118,10 +118,10 @@ void FitSystematic::Configure( const string &confFile ) {
   else if ( m_analysis == "DiffXS" ) m_categoriesName = { "Inclusive", "0-40 GeV", "40-60 GeV", "60-100 GeV", "100-200 GeV", "200- GeV" };
   else if ( m_analysis == "DiffXSPhi" ) m_categoriesName = { "Inclusive", "#Delta#phi<0", "#Delta#phi#in [0,#frac{#Pi}{3}[", "#Delta#phi#in [#frac{#Pi}{3},#frac{2#Pi}{3}[", "#Delta#phi#in [#frac{2#Pi}{3},#frac{5#Pi}{6}[", "#Delta#phi#in [#frac{2#Pi}{3},#Pi[" };
   //  else m_categoriesName = { "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" };
-  else m_categoriesName = { "Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"}; 
+  //  else if ( m_analysis == "CouplingsBDT" ) m_categoriesName = { "Inclusive", "GGH_0J_CEN", "GGH_0J_FWD", "GGH_1J_LOW", "GGH_1J_MED", "GGH_1J_HIGH", "GGH_1J_BSM", "GGH_2J_LOW", "GGH_2J_MED", "GGH_2J_HIGH", "GGH_2J_BSM", "VBF_HjjLO_loose",  "VBF_HjjLO_tight",  "VBF_HjjHI_loose",   "VBF_HjjHI_tight",   "VHhad_loose", "VHhad_tight", "QQH_BSM", "VHMET_LOW", "VHMET_MED", "VHMET_BSM",  "VHlep_LOW", "VHlep_HIGH", "VHdilep_LOW", "VHdilep_HIGH", "tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"}; 
+  else                                     m_categoriesName = { "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_Med", "VHMET_High", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "tHhad_4j2b", "tHhad_4j1b",  "ttHhadBDT4", "ttHhadBDT3", "ttHhadBDT2",  "ttHhadBDT1",   "ttHlep",      "tHlep_1fwd",  "tHlep_0fwd" };
 
-
-  for ( auto vMergeLine : inMergeNP ) {
+for ( auto vMergeLine : inMergeNP ) {
     vector<string> dumV;
     ParseVector( vMergeLine, dumV );
     m_mergeNP[dumV.front()] = dumV.back();
@@ -148,7 +148,7 @@ void FitSystematic::FillDataset( const std::vector<std::string> &rootFilesName )
     catVar = "catXSPhi";
     weightName = "weightXSPhi";
   }
-  else if ( m_analysis == "CouplingsBDT" ) catVar = "catCoupBDT";
+  else if ( m_analysis ==  "CouplingsBDT" ) catVar = "catCoupBDT";
 
   //Create roofit parameters to fill datasets
   const vector<string> CBVarName = { "m_yy", "weight" };  
@@ -227,6 +227,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
     if ( itNPName->find("PH_EFF") != string::npos || itNPName->find("PH_Iso")!=string::npos ) continue;
     string branchPrefix { *itNPName!="" ? *itNPName + "_"  : "" };
     string catBranchName { ( isCatVarCommon ? "" : branchPrefix ) +catVar };
+
     int category = static_cast<int>(m_mapBranch.GetDouble( catBranchName ) );
     if ( category == -99 ) continue;
     tuple<double,double,int> currentEvent { 0, 0, MergedCategory(category) };
@@ -261,6 +262,7 @@ void FitSystematic::FillEntryDataset( map<string,RooRealVar*> &observables,
     if ( mass < massMin || mass > massMax ) continue;
     observables["m_yy"]->setVal( mass );
     weightVar->setVal( std::get<1>( itChannels.second ) );
+    if ( name=="" ) weightVar->setVal( weightVar->getVal()/2. );
 
     //    cout << mass << " " << weightVar->getVal() << endl;
     ExtendMapVect( m_datasets, name, category );

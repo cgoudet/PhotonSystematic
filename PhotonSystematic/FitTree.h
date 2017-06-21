@@ -127,7 +127,7 @@ Input treated in FitSystematic::FillCategoryMerging.
 
 
 inline const std::list<std::string> &GetAllowedAnalyses() {
-  static const std::list<std::string> allowedAnalyses = {"Couplings33","Couplings13", "DiffXS", "DiffXSPhi", "CouplingsBDT" };
+  static const std::list<std::string> allowedAnalyses = {"Couplings33","Couplings13", "DiffXS", "DiffXSPhi", "CouplingsBDT", "CouplingsBDTh015" };
   return allowedAnalyses;
 }
 

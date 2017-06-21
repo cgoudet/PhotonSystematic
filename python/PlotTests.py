@@ -18,10 +18,13 @@ categoriesNames = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-
 categoriesNames = ["Inclusive", "GGH-0J-CEN", "GGH-0J-FWD","GGH-1J-LOW","GGH-1J-MED","GGH-1J-HIGH","GGH-1J-BSM","GGH-2J-LOW","GGH-2J-MED","GGH-2J-HIGH","GGH-2J-BSM","VBF-HjjLO-loose","VBF-HjjLO-tight","VBF-HjjHI-loose","VBF-HjjHI-tight","VHhad-loose","VHhad-tight","QQH-BSM", "VHMET-LOW","VHMET-MED","VHMET-BSM","VHlep-LOW","VHlep-HIGH","VHdilep-LOW", "VHdilep-HIGH","tHhad-4j2b", "tHhad-4j1b", "ttHhad-BDT4", "ttHhad-BDT3",  "ttHhad-BDT2", "ttHhad-BDT1", "ttHlep", "tHlep-1fwd", "tHlep-0fwd"]
 
 def GetCategories( prod ) :
+    print( 'prod : ' + prod )
     categories = [ 'Inclusive', "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
     if prod=='h014' : categories = [ "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
     elif prod == 'h015catMerge' : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_HIGH","VHlep_LOW","VHlep_HIGH","VHdilep","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
-    elif prod == 'h015' : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_MED","VHMET_BSM","VHlep_LOW","VHlep_HIGH","VHdilep_LOW", "VHdilep_HIGH","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    elif prod == 'h015' or prod == 'h015d'  : categories = ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD", "GGH_1J_LOW", "GGH_1J_MED", "GGH_1J_HIGH", "GGH_1J_BSM", "GGH_2J_LOW", "GGH_2J_MED", "GGH_2J_HIGH", "GGH_2J_BSM", "VBF_HjjLO_loose", "VBF_HjjLO_tight", "VBF_HjjHI_loose", "VBF_HjjHI_tight", "VHhad_loose", "VHhad_tight", "QQH_BSM", "VHMET_LOW", "VHMET_MED", "VHMET_BSM", "VHlep_LOW", "VHlep_HIGH", "VHdilep_LOW", "VHdilep_HIGH", "tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    elif prod == 'h015dcatMerge' : categories = ["Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHlep_Low", "VHlep_High", "VHdilep", "tHhad_4j2b", "tHhad_4j1b", "ttHhadBDT4", "ttHhadBDT3", "ttHhadBDT2", "ttHhadBDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
+
     return categories    
 #==========================================
 def GetTLimGaus( mapResults, side , fluct = [ 'up' ], syst = [ 'EG_RESOLUTION_ALL' ] ) :
@@ -302,7 +305,7 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
         [ do.AddOption( 'legend', labelDir + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
 
 
-    [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ]*nDir ] 
+    [ do.AddOption( 'varWeight',category.replace('_','-')+variation ) for variation in ['Up','Down' ]*nDir ] 
 
     plotDirectory = directories[0] if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'
     do.AddOption( 'plotDirectory', plotDirectory )
@@ -343,9 +346,10 @@ def CompareFit( directories, prefix='CompareModels' ) :
     """
     if not directories : return
 
-    prod = 'h015catMerge'
+    prod = 'h015'
     if 'h014' in directories[0] : prod = 'h014'
-    elif 'catMerge' in directories[0] : prod = 'h015catMerge'
+#    elif 'h015d' in directories[0] : prod = 'h015d'
+    if 'catMerge' in directories[0] : prod += 'catMerge'
     categories = GetCategories( prod )
 
     variables = [ 'mean', 'sigma', 'yield' ]
@@ -528,8 +532,8 @@ def ListToCSV( outFileName, tabular, var ) :
     varName = 'mean' if var in ['alpha', 'mean'] else 'sigma'
 
     dictSize = len(tabular.values()[0])
-    prod = 'h015catMerge'
-    if dictSize == 34 : prod='h015'
+    prod = 'h015dcatMerge'
+
     categories = GetCategories( prod )
 
     fluctuations=[''] if len(categories)==dictSize else ['Down', 'Up' ]
