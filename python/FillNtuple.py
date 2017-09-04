@@ -76,6 +76,7 @@ def MoveSample( inFileName ) :
     directory='/sps/atlas/c/cgoudet/Hgam/Inputs/'
     prod = 'h014'
     if 'h015d' in inFileName : prod='h015d'
+    elif 'h015f' in inFileName : prod='h015f'
     elif 'h015' in inFileName : prod='h015'
 
 

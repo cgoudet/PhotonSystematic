@@ -16,15 +16,16 @@ The datasets which must be downloaded are :
 - mc15c.aMCnloPy8_bbH125_yb2
 - mc15c.aMCnloPy8_bbH125_ybyt
 - mc15c.aMCnloPy8_ttH125
+
 Each file is usually about 4GB heavy. 
 The full PhotonAllSys h015d production weights 415GB.
 
 ### Extract the name of all the EGamma NP in the model.
 - Open a MxAOD in root (do not do any rcSetup in the session) and CollectionTree->Print(); > ../<version>_<EGamModel>.txt
 - Call PhotonSystematic/python/FindBranches.py <path_to version directory>. 
-This will generate the listContainers.txt files with all the branches in the current file.
-The branches should be harmonized between all input files
-If the dataset is splitted in parts with distinct NP, create a list container1(2,3, ...).txt for each subset.
+This will generate alistContainers.txt files with all the branches in the current file.
+It is assumed that the branches of interest in the files are all the same.
+If the dataset is splitted in parts with distinct NP, the procedure should be repeated with of each set and the listconstainers files must be renamed listcontainer1(2,3, ...).txt.
 
 
 ### Create ntuple from MxAOD
@@ -48,11 +49,12 @@ On the batch, the code usually runs at lower rate (5-10Hz) and lasts for 3 to fo
 Given the large number of files, it is usually run of the batch (--mode 1).
 
 ### Copy ntuple to directory
+- Add the file version to the python code responsible for copying. In PhotonSystemati/python/FillNtuple.py, in the function MoveSample, you can add a keyword which define the version.
 - Call python PhotonSystematic/python/FillNtuple.py --mode 2
 - You can remove the FillNtuple directories in the current directory afterward
 
 ### Run the fitting procedure
-- Call TestSyst <rootFile> --inConfFile <configurationFile> --mode 1 --outFileName <outDirectory>
+- Call TestSyst 'rootFile' --inConfFile 'configurationFile' --mode 1 --outFileName 'outDirectory'
 
 The directory <outDirectory> is created if it doesn't exist. All the output files will be printed in this directory.
 
@@ -61,7 +63,7 @@ Configuration file must be in boost format. The available options are in FitSyst
 For h015d production, the total fitting time is estimated at 35min : 30mins to read ntuples and fill datasets, 5min for the fits.
 
 ### Create the plots
-- python PhotonSystematic/python/PlotTests.py <resultFile>
+- python PhotonSystematic/python/PlotTests.py 'resultFile'
 
 By default, plots for the full set of systematics are created.
 If the name of the directory contains 'Merge', the postmerge results will be used.
