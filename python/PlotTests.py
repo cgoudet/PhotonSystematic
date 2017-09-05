@@ -8,22 +8,22 @@ import os
 from ROOT import *
 from math import sqrt
 #sys.path.append(os.path.abspath("/afs/in2p3.fr/home/c/cgoudet/private/Calibration/PlotFunctions/python"))
-sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/PlotFunctions/python"))
+sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/Framework_h015d/PlotFunctions/python"))
 from SideFunction import *
 from DrawOptions import *
-sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/Template/python"))
+#sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/FrameWork/Template/python"))
+sys.path.append(os.path.abspath("/sps/atlas/c/cgoudet/Hgam/Framework_h015d/Template/python"))
 from Functions_MeasureAlphaSigma import *
 #categoriesNames=[ "Inclusive", "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
 categoriesNames = [ "Inclusive", "ggH-0J-Cen", "ggH-0J-Fwd", "ggH-1J-Low", "ggH-1J-Med", "ggH-1J-High", "ggH-1J-BSM", "ggH-2J-Low", "ggH-2J-Med", "ggH-2J-High", "ggH-2J-BSM", "VBF-HjjLow-loose", "VBF-HjjLow-tight", "VBF-HjjHigh-loose", "VBF-HjjHigh-tight", "VHhad-loose", "VHhad-tight", "qqH-BSM", "VHMET-Low", "VHMET-High", "VHMET-BSM", "VHlep-Low", "VHlep-High", "VHdilep-Low", "VHdilep-High", "ttHhad-6j2b", "ttHhad-6j1b", "ttHhad-5j2b", "ttHhad-5j1b", "tHhad-4j2b", "tHhad-4j1b", "ttHlep", "tHlep-1fwd", "tHlep-0fwd" ]
 categoriesNames = ["Inclusive", "GGH-0J-CEN", "GGH-0J-FWD","GGH-1J-LOW","GGH-1J-MED","GGH-1J-HIGH","GGH-1J-BSM","GGH-2J-LOW","GGH-2J-MED","GGH-2J-HIGH","GGH-2J-BSM","VBF-HjjLO-loose","VBF-HjjLO-tight","VBF-HjjHI-loose","VBF-HjjHI-tight","VHhad-loose","VHhad-tight","QQH-BSM", "VHMET-LOW","VHMET-MED","VHMET-BSM","VHlep-LOW","VHlep-HIGH","VHdilep-LOW", "VHdilep-HIGH","tHhad-4j2b", "tHhad-4j1b", "ttHhad-BDT4", "ttHhad-BDT3",  "ttHhad-BDT2", "ttHhad-BDT1", "ttHlep", "tHlep-1fwd", "tHlep-0fwd"]
 
 def GetCategories( prod ) :
-    print( 'prod : ' + prod )
     categories = [ 'Inclusive', "ggH_CenLow", "ggH_CenHigh", "ggH_FwdLow", "ggH_FwdHigh", "VBFloose", "VBFtight", "VHhad_loose", "VHhad_tight", "VHMET", "VHlep", "VHdilep", "ttHhad", "ttHlep" ]
     if prod=='h014' : categories = [ "Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHMET_BSM", "VHlep_Low", "VHlep_High", "VHdilep_Low", "VHdilep_High", "ttHhad_6j2b", "ttHhad_6j1b", "ttHhad_5j2b", "ttHhad_5j1b", "tHhad_4j2b", "tHhad_4j1b", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
     elif prod == 'h015catMerge' : categories= ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD","GGH_1J_LOW","GGH_1J_MED","GGH_1J_HIGH","GGH_1J_BSM","GGH_2J_LOW","GGH_2J_MED","GGH_2J_HIGH","GGH_2J_BSM","VBF_HjjLO_loose","VBF_HjjLO_tight","VBF_HjjHI_loose","VBF_HjjHI_tight","VHhad_loose","VHhad_tight","QQH_BSM", "VHMET_LOW","VHMET_HIGH","VHlep_LOW","VHlep_HIGH","VHdilep","tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
-    elif prod == 'h015' or prod == 'h015d'  : categories = ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD", "GGH_1J_LOW", "GGH_1J_MED", "GGH_1J_HIGH", "GGH_1J_BSM", "GGH_2J_LOW", "GGH_2J_MED", "GGH_2J_HIGH", "GGH_2J_BSM", "VBF_HjjLO_loose", "VBF_HjjLO_tight", "VBF_HjjHI_loose", "VBF_HjjHI_tight", "VHhad_loose", "VHhad_tight", "QQH_BSM", "VHMET_LOW", "VHMET_MED", "VHMET_BSM", "VHlep_LOW", "VHlep_HIGH", "VHdilep_LOW", "VHdilep_HIGH", "tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
-    elif prod == 'h015dcatMerge' : categories = ["Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHlep_Low", "VHlep_High", "VHdilep", "tHhad_4j2b", "tHhad_4j1b", "ttHhadBDT4", "ttHhadBDT3", "ttHhadBDT2", "ttHhadBDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
+    elif prod == 'h015' or prod == 'h015d' : categories = ["Inclusive", "GGH_0J_CEN", "GGH_0J_FWD", "GGH_1J_LOW", "GGH_1J_MED", "GGH_1J_HIGH", "GGH_1J_BSM", "GGH_2J_LOW", "GGH_2J_MED", "GGH_2J_HIGH", "GGH_2J_BSM", "VBF_HjjLO_loose", "VBF_HjjLO_tight", "VBF_HjjHI_loose", "VBF_HjjHI_tight", "VHhad_loose", "VHhad_tight", "QQH_BSM", "VHMET_LOW", "VHMET_MED", "VHMET_BSM", "VHlep_LOW", "VHlep_HIGH", "VHdilep_LOW", "VHdilep_HIGH", "tHhad_4j2b", "tHhad_4j1b", "ttHhad_BDT4", "ttHhad_BDT3",  "ttHhad_BDT2", "ttHhad_BDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd"]
+    elif prod == 'h015dcatMerge' or prod == 'h015fcatMerge' : categories = ["Inclusive", "ggH_0J_Cen", "ggH_0J_Fwd", "ggH_1J_Low", "ggH_1J_Med", "ggH_1J_High", "ggH_1J_BSM", "ggH_2J_Low", "ggH_2J_Med", "ggH_2J_High", "ggH_2J_BSM", "VBF_HjjLow_loose", "VBF_HjjLow_tight", "VBF_HjjHigh_loose", "VBF_HjjHigh_tight", "VHhad_loose", "VHhad_tight", "qqH_BSM", "VHMET_Low", "VHMET_High", "VHlep_Low", "VHlep_High", "VHdilep", "tHhad_4j2b", "tHhad_4j1b", "ttHhadBDT4", "ttHhadBDT3", "ttHhadBDT2", "ttHhadBDT1", "ttHlep", "tHlep_1fwd", "tHlep_0fwd" ]
 
     return categories    
 #==========================================
@@ -289,6 +289,17 @@ def plotTest( dirPrefix, testID ) :
     return listPlots
 
 #====================================================
+def GetProdTag( s ) :
+    """
+    Get the tag of the production campaign
+    """
+    prod = 'h015'
+    if 'h014' in s : prod = 'h014'
+    elif 'h015d' in s : prod = 'h015d'
+    elif 'h015f' in s : prod = 'h015f'
+    if 'catMerge' in s : prod += 'catMerge'
+    return prod
+#====================================================
 def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='CompareModels' ) :
     """
     Create the boost config file for a category and for a variable
@@ -297,15 +308,21 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     do = DrawOptions()
     nDir = 0;
 
+
+    # [ do.AddOption( 'rootFileName','/sps/atlas/c/cgoudet/Hgam/svnCouplings/Moriond2017/Systematics/Calibration/Christophe_20170620/goudet_h015d_Merge_'+variable+'.csv') for i in range(0, 2)];
+    # [ do.AddOption( 'legend', 'h015d_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
+
     labelDir = ''
     for d in directories : 
         nDir+=1
         labelDir = StripString(d[:-1], 1, 0 )
         [ do.AddOption( 'rootFileName',AbsPath(d)+labelDir+'_SystVariation_'+('postMerged_' if 'Merge' in d else '' )+variable+'.csv' ) for i in range(0, 2)];
-        [ do.AddOption( 'legend', labelDir + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
+        [ do.AddOption( 'legend', labelDir[:labelDir.find('_')] + '_' + variation + ' : tot=__OPLUS' ) for variation in ['Up', 'Down' ] ]
 
 
-    [ do.AddOption( 'varWeight',category.replace('_','-')+variation ) for variation in ['Up','Down' ]*nDir ] 
+
+#    [ do.AddOption( 'varWeight',category.replace('_','-')+variation ) for variation in ['Up','Down' ]*nDir*2 ] 
+    [ do.AddOption( 'varWeight',category+variation ) for variation in ['Up','Down' ]*nDir*2 ] 
 
     plotDirectory = directories[0] if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'
     do.AddOption( 'plotDirectory', plotDirectory )
@@ -337,24 +354,76 @@ def SystModelBoost( directories, category='Inclusive', variable='mean', prefix='
     do.WriteToFile( fileName )
 
     os.system( 'PlotDist ' + fileName )
+#    if 'Inclusive' not in category : exit(0)
     return StripString(fileName, 0, 1) + '_' + variable +'.pdf'
+
+#==========================================
+def TotUncertBoost( directories, variable='mean', prefix='CompareModels', variation='Up' ) :
+    """
+    Create the plot of total uncertainty as a function of the categories
+    """
+
+    do = DrawOptions()
+    nDir = 0;
+
+    labelDir = ''
+    for d in directories : 
+        nDir+=1
+        labelDir = StripString(d[:-1], 1, 0 )
+        do.AddOption( 'rootFileName',AbsPath(d)+labelDir+'_SystVariation_'+('postMerged_' if 'Merge' in d else '' )+variable+'.csv' );
+        do.AddOption( 'legend', labelDir[:labelDir.find('_')]  ) 
+
+
+        prod = GetProdTag(d)
+        categories = GetCategories(prod)
+        do.AddOption( 'varName',' '.join( [category+variation for category in categories] ) )  
+
+
+
+
+    plotDirectory = directories[0] if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'
+    do.AddOption( 'plotDirectory', plotDirectory )
+
+    do.AddOption( 'inputType', '2' )
+    do.AddOption( 'function', '1' )
+    do.AddOption( 'latex', variable )
+    do.AddOption( 'latexOpt','0.16 0.92' )
+    do.AddOption( 'latex', variation )
+    do.AddOption( 'latexOpt','0.16 0.87' )
+    do.AddOption( 'legendPos','0.5 0.5' )
+    do.AddOption( 'grid','1' )
+    do.AddOption( 'drawStyle','0' )
+    do.AddOption( 'scale','100' )
+    do.AddOption( 'xTitle','' )
+    do.AddOption( 'yTitle','Total uncertainty (%)' )
+    do.AddOption( 'rangeUserY','0 X')
+    do.AddOption( 'topMargin','0.01' )
+    do.AddOption( 'bottomMargin','0.22' )
+    categories = GetCategories(GetProdTag(directories[0]) )
+    do.AddOption( 'labels', ' '.join( categories ) )
+
+    fileName=plotDirectory+(labelDir if nDir==1 else prefix) + '_Systematics_' + variable + '.boost'
+    print( fileName )
+    do.WriteToFile( fileName )
+
+    os.system( 'PlotDist ' + fileName )
+    return StripString(fileName, 0, 1) + '_' +categories[0] + 'Up.pdf'
 
 #==========================================
 def CompareFit( directories, prefix='CompareModels' ) :
     """
     Read the CSV output files from FitSystematic and plot total 
     """
-    if not directories : return
 
-    prod = 'h015'
-    if 'h014' in directories[0] : prod = 'h014'
-#    elif 'h015d' in directories[0] : prod = 'h015d'
-    if 'catMerge' in directories[0] : prod += 'catMerge'
+    if directories == [] : return 
+    prod=GetProdTag(directories[0])
     categories = GetCategories( prod )
 
     variables = [ 'mean', 'sigma', 'yield' ]
 
-    boostFiles = [ SystModelBoost( directories, vCat, vVar, prefix ) for vCat in categories for vVar in variables ]
+    boostFiles = [ TotUncertBoost( directories, vVar, prefix ) for vVar in variables ]
+    boostFiles += [ SystModelBoost( directories, vCat, vVar, prefix ) for vCat in categories for vVar in variables ]
+    print( boostFiles )
 
     nDir = len(directories)
     labelDir = directories[0]+StripString(directories[0][:-1], 1, 0 ) if nDir==1 else '/sps/atlas/c/cgoudet/Plots/'+prefix
@@ -623,6 +692,8 @@ def main():
     elif args.mode==3 : [ LaunchTemplates( d ) for d in args.directories ] 
     elif args.mode==4 : [ TreatTemplates( args.prefix, args.directories, var ) for var in ['alpha', 'c' ] ]
     elif args.mode==5 : [ SymmetrizeCSV( d ) for d in args.directories ]
+
+
 # The program entrance
 if __name__ == '__main__':
     main()

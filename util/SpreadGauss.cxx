@@ -87,7 +87,7 @@ void SpreadGauss() {
     inOptions.push_back( legend[*it] );
   }
   DrawOptions drawOpt;
-  drawOpt.FillOptions( inOptions );
+  drawOpt.AddOption( inOptions );
   drawOpt.Draw( drawHist );
  
 }
